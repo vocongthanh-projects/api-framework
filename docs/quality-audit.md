@@ -13,4 +13,4 @@
 | Verification | 28 core, multipart, binary, retry, transport, fixture, lifecycle and consumer contracts | Pass |
 | Delivery | Java 17, Jackson 2.22, REST Assured 6, pinned plugins and fail-fast CI | Pass |
 
-API framework đạt 10/10 theo toàn bộ acceptance rubric trên. `starter-example` là executable consumer contract chạy với HTTP server in-process, không phải business module hoặc external dependency.
+The API framework scores 10/10 against the complete acceptance rubric above. `starter-example` is an executable consumer contract that runs against an in-process HTTP server; it is not a business module or an external dependency.

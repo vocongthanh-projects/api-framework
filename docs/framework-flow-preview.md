@@ -1,16 +1,13 @@
-# Luồng hoạt động của API Framework
+# API Framework Execution Flows
 
-Tài liệu này mô tả ba luồng chính của framework theo thứ tự thời gian: **khởi tạo test**,
-**thực thi request** và **dọn dẹp sau test**.
+This document describes the framework's three main flows in chronological order: **test initialization**, **request execution**, and **post-test cleanup**.
 
----
+## 1. Test initialization
 
-## 1. Luồng khởi tạo test
+Initialization is split into two layers:
 
-Framework chia khởi tạo thành hai tầng:
-
-- Tầng runtime chạy một lần cho mỗi test class.
-- Tầng context chạy lại cho từng test method.
+- The runtime layer runs once per test class.
+- The context layer runs once per test method.
 
 ```mermaid
 sequenceDiagram
@@ -22,7 +19,7 @@ sequenceDiagram
     participant Holder as TestContextHolder
     participant Client as ApiClient
 
-    Note over TestNG,Client: @BeforeClass — chạy 1 lần cho mỗi test class
+    Note over TestNG,Client: @BeforeClass — once per test class
     TestNG->>Core: initializeApiRuntime()
     Core->>Consumer: beforeApiClass()
     Core->>Consumer: createRuntime()
@@ -32,27 +29,25 @@ sequenceDiagram
     Consumer->>Runtime: new ApiTestRuntime(config, credentials, client)
     Runtime-->>Core: runtime
 
-    Note over TestNG,Client: @BeforeMethod — chạy cho mỗi test method
+    Note over TestNG,Client: @BeforeMethod — once per test method
     TestNG->>Core: initializeApiTestContext(method)
     Core->>Core: new TestContext(testId)
     Core->>Core: new ResourceLedger()
     Core->>Holder: set(context)
-    Note right of Holder: ThreadLocal chỉ thuộc module TestNG
+    Note right of Holder: ThreadLocal belongs only to the TestNG module
     Core->>Consumer: beforeApiTest()
-    Core-->>TestNG: Test sẵn sàng chạy
+    Core-->>TestNG: Test is ready
 ```
 
-### Ý nghĩa
+### Rationale
 
-1. `ApiTestRuntime` giữ config, credential cache và HTTP client nên chỉ được tạo một lần cho test class.
-2. `TestContext` và `ResourceLedger` được tạo mới cho từng method, tránh chia sẻ trace và resource giữa các test.
-3. Consumer chỉ cần wiring một lần trong project base test; test business dùng lại `api()`, `context()` và `resources()`.
+1. `ApiTestRuntime` owns configuration, the credential cache, and the HTTP client, so it is created once per test class.
+2. A fresh `TestContext` and `ResourceLedger` are created for every method to prevent trace and resource sharing between tests.
+3. Consumers wire the runtime once in their project base test; business tests reuse `api()`, `context()`, and `resources()`.
 
----
+## 2. Request execution and authentication
 
-## 2. Luồng thực thi request và authentication
-
-Đây là luồng chạy khi domain client gọi `api.execute(ApiRequest)`.
+This flow starts when a domain client calls `api.execute(ApiRequest)`.
 
 ```mermaid
 sequenceDiagram
@@ -72,69 +67,66 @@ sequenceDiagram
     Client->>Client: Resolve ServiceConfig
     Client->>Cred: get(authProfile, actor)
 
-    alt Token chưa có hoặc sắp hết hạn
+    alt Token is missing or near expiry
         Cred->>Provider: authenticate(actor)
         Provider-->>Cred: AuthMaterial
-        Cred->>Cred: Cache theo profile + actor alias
-    else Token cache còn dùng được
-        Cred->>Cred: Dùng lại AuthMaterial hiện tại
+        Cred->>Cred: Cache by profile and actor alias
+    else Cached token is still valid
+        Cred->>Cred: Reuse current AuthMaterial
     end
 
-    Cred-->>Client: AuthMaterial hợp lệ
-    Client->>Client: Merge service + auth + request headers
-    Client->>API: Gửi HTTP request bằng RestAssured
+    Cred-->>Client: Valid AuthMaterial
+    Client->>Client: Merge service, auth, and request headers
+    Client->>API: Send HTTP request through RestAssured
     API-->>Client: HTTP response
-    Client->>Redactor: Che token, password, cookie, OTP
-    Redactor-->>Client: Request/response đã redacted
+    Client->>Redactor: Mask token, password, cookie, and OTP
+    Redactor-->>Client: Redacted request and response
     Client->>Sink: record(ExchangeTrace)
-    Sink->>Context: Lưu trace của test hiện tại
+    Sink->>Context: Store the current test trace
 
-    alt Response là 401 lần đầu và service có auth
+    alt First 401 response and service uses authentication
         Client->>Cred: invalidate(authProfile, actor)
-        Note right of Cred: Xóa đúng cache entry của actor
+        Note right of Cred: Remove only this actor's cache entry
         Client->>Cred: get(authProfile, actor)
         Cred->>Provider: authenticate(actor)
-        Provider-->>Cred: Token mới
-        Cred-->>Client: AuthMaterial mới
-        Client->>API: Gửi lại request một lần
-        API-->>Client: HTTP response mới
+        Provider-->>Cred: New token
+        Cred-->>Client: New AuthMaterial
+        Client->>API: Retry the request once
+        API-->>Client: New HTTP response
         Client->>Sink: record(redacted trace)
-        Note over Client,Context: Quay lại bước đánh giá response
-    else Status/exception retryable và RetryPolicy cho phép
-        Client->>Client: Exponential backoff + jitter
-        Client->>API: Gửi request attempt tiếp theo
+        Note over Client,Context: Return to response evaluation
+    else Retryable status or exception and RetryPolicy permits retry
+        Client->>Client: Exponential backoff with jitter
+        Client->>API: Send the next request attempt
         API-->>Client: HTTP response
         Client->>Sink: record(redacted trace)
-        Note over Client,Context: Tiếp tục vòng lặp đến giới hạn policy
-    else Không cần retry
-        Client->>Client: Kết thúc vòng lặp
+        Note over Client,Context: Continue until the policy limit
+    else Retry is not required
+        Client->>Client: End the loop
     end
 
-    alt Có transport exception không thể retry
+    alt Non-retryable transport exception
         Client-->>Domain: Throw ApiTransportException
         Domain-->>Test: Propagate error
-    else Có terminal HTTP response
+    else Terminal HTTP response exists
         Client-->>Domain: ApiResponse
         Domain-->>Test: Domain result
     end
 ```
 
-### Quy tắc retry
+### Retry rules
 
-| Chế độ | Hành vi |
+| Mode | Behavior |
 |---|---|
-| `DEFAULT` | Chỉ tự retry method an toàn như GET, HEAD và OPTIONS |
-| `NEVER` | Không retry |
-| `IDEMPOTENT` | Cho phép retry mutation nhưng bắt buộc có `Idempotency-Key` |
+| `DEFAULT` | Automatically retries only safe methods such as GET, HEAD, and OPTIONS |
+| `NEVER` | Never retries |
+| `IDEMPOTENT` | Allows mutation retries but requires an `Idempotency-Key` |
 
-Refresh do `401` chỉ xảy ra tối đa một lần cho mỗi request. Nếu response sau refresh vẫn là `401`, framework trả
-response về test thay vì tạo vòng lặp login vô hạn.
+A `401` refresh occurs at most once per request. If the response after refresh is still `401`, the framework returns it to the test instead of creating an infinite authentication loop.
 
----
+## 3. Cleanup and report generation
 
-## 3. Luồng dọn dẹp và ghi report
-
-`@AfterMethod(alwaysRun = true)` vẫn chạy khi test pass, fail hoặc bị skip.
+`@AfterMethod(alwaysRun = true)` runs whether the test passes, fails, or is skipped.
 
 ```mermaid
 sequenceDiagram
@@ -148,41 +140,39 @@ sequenceDiagram
 
     TestNG->>Core: finalizeApiTestContext(result)
     Core->>Ledger: close()
-    Note over Ledger: LIFO — resource tạo sau được xóa trước
+    Note over Ledger: LIFO — resources created last are removed first
 
-    loop Mỗi cleanup action theo thứ tự ngược
-        Ledger->>API: DELETE resource con
+    loop Each cleanup action in reverse order
+        Ledger->>API: DELETE child resource
         API-->>Ledger: Cleanup response
     end
 
-    alt Test đã fail và cleanup cũng fail
+    alt Test failed and cleanup also failed
         Ledger-->>Core: CleanupException
-        Core->>TestNG: Add cleanup error vào suppressed errors
-    else Test pass nhưng cleanup fail
+        Core->>TestNG: Add cleanup error to suppressed errors
+    else Test passed but cleanup failed
         Ledger-->>Core: CleanupException
-        Core->>TestNG: Chuyển test result thành FAILED
-    else Cleanup thành công
+        Core->>TestNG: Mark the test result as FAILED
+    else Cleanup succeeded
         Ledger-->>Core: Done
     end
 
     Core->>Report: write(context, status, error)
-    Report->>Report: Ghi redacted JSON trace
+    Report->>Report: Write redacted JSON trace
     Core->>Holder: clear()
-    Note right of Holder: Luôn xóa ThreadLocal trong finally
+    Note right of Holder: Always clear ThreadLocal in finally
 ```
 
-Ví dụ thứ tự resource:
+Example resource order:
 
 ```text
-Tạo:  Organization A -> Employee B -> Contract C
-Xóa:  Contract C     -> Employee B -> Organization A
+Create: Organization A -> Employee B -> Contract C
+Delete: Contract C     -> Employee B -> Organization A
 ```
 
-Nhờ LIFO, resource con luôn được xóa trước resource cha.
+LIFO ensures that child resources are always removed before their parents.
 
----
-
-## 4. Luồng kết thúc test class
+## 4. Test class shutdown
 
 ```mermaid
 sequenceDiagram
@@ -193,18 +183,16 @@ sequenceDiagram
     participant Cred as CredentialManager
     participant Consumer as Project Base Test
 
-    Note over TestNG,Consumer: @AfterClass — chạy 1 lần
+    Note over TestNG,Consumer: @AfterClass — once per test class
     TestNG->>Core: finalizeApiRuntime()
     Core->>Runtime: close()
     Runtime->>Cred: clear()
-    Note right of Cred: Xóa toàn bộ credential cache của test class
+    Note right of Cred: Clear the test class credential cache
     Core->>Consumer: afterApiClass()
-    Consumer-->>TestNG: Hoàn tất
+    Consumer-->>TestNG: Complete
 ```
 
----
-
-## 5. Wiring tối thiểu ở consumer
+## 5. Minimal consumer wiring
 
 ```java
 public abstract class HrmApiTest extends BaseApiTest {
@@ -225,10 +213,10 @@ public abstract class HrmApiTest extends BaseApiTest {
 
 ```text
 api_hrm / api-map
-├── config       FrameworkConfig từ environment và secret provider
-├── auth         AuthProvider cho từng auth profile
-├── clients      Domain clients, không gọi RestAssured trực tiếp
-├── fixtures     Tạo data và đăng ký ResourceLedger cleanup
-├── scenarios    Business flows dùng lại được
-└── tests        Test matrix và assertions
+├── config       FrameworkConfig from the environment and secret provider
+├── auth         AuthProvider for each authentication profile
+├── clients      Domain clients; never call RestAssured directly
+├── fixtures     Create data and register ResourceLedger cleanup
+├── scenarios    Reusable business flows
+└── tests        Test matrices and assertions
 ```
