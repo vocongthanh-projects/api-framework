@@ -1,0 +1,10 @@
+target/
+**/target/
+.idea/
+*.iml
+.DS_Store
+.env
+config-local.properties
+allure-results/
+api-traces/
+
