@@ -1,7 +1,7 @@
 workflow:
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
-    - if: '$CI_COMMIT_BRANCH == "main"'
+    - if: '$CI_COMMIT_BRANCH == "develop"'
 
 default:
   image: eclipse-temurin:17-jdk
@@ -47,6 +47,6 @@ test:
 deploy:
   stage: deploy
   rules:
-    - if: '$CI_COMMIT_BRANCH == "main"'
+    - if: '$CI_COMMIT_BRANCH == "develop"'
   script:
     - ./mvnw $MAVEN_CLI_OPTS deploy -DskipTests -s ci_settings.xml
