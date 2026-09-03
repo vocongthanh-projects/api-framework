@@ -35,32 +35,118 @@ response.requireStatus(201).saveTo(Path.of("target/downloads/result.pdf"));
 
 Multipart traces contain only part name, type and byte count. Filenames and file contents are excluded. Binary responses remain byte-exact and are represented by metadata in trace output.
 
-## Consumer usage
+## How to import into your project
 
-Add the transport and TestNG integration dependencies, build `FrameworkConfig`, register auth providers,
-then expose domain-oriented clients. Tests must never call `RestAssured.given()` directly.
+Add the GitLab Package Registry and framework dependencies to your consumer project's `pom.xml`:
 
-```java
-FrameworkConfig config = FrameworkConfig.builder()
-    .service(ServiceConfig.builder("hrm", System.getenv("HRM_BASE_URL"))
-        .authProfile("admin")
-        .header("X-Tenant-Code", System.getenv("TENANT_CODE"))
-        .build())
-    .build();
+```xml
+<repositories>
+    <repository>
+        <id>gitlab-maven</id>
+        <url>http://10.0.0.40/api/v4/groups/qc-quality-control/-/packages/maven</url>
+    </repository>
+</repositories>
 
-CredentialManager credentials = new CredentialManager(Map.of(
-    "admin", actor -> AuthMaterial.bearer(login(actor), expiresAt)
-));
+<dependencies>
+    <!-- Core TestNG Lifecycle & Tracing -->
+    <dependency>
+        <groupId>vn.ots.qc</groupId>
+        <artifactId>framework-testng</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+    </dependency>
 
-ApiClient api = new RestAssuredApiClient(config, credentials, new CurrentTestTraceSink());
-ApiTestRuntime runtime = new ApiTestRuntime(config, credentials, api);
+    <!-- HTTP Transport with auto-retry, secret redaction, auto-401 recovery -->
+    <dependency>
+        <groupId>vn.ots.qc</groupId>
+        <artifactId>framework-http-restassured</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+    </dependency>
+
+    <!-- Fixtures: eventual-consistency polling, LIFO cleanup, unique data -->
+    <dependency>
+        <groupId>vn.ots.qc</groupId>
+        <artifactId>framework-fixtures</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+    </dependency>
+</dependencies>
 ```
 
-The explicit trace sink keeps the HTTP transport independent from TestNG. Outside TestNG, pass another
-`TraceSink` implementation or use the two-argument constructor when tracing is not required.
+## Consumer usage & Step-by-step Guide
 
-Define this wiring once in a project-specific base class by implementing `createRuntime()`. All consumer test
-classes inherit `runtime()` and `api()`; they do not rebuild configuration or credentials per test.
+### 1. Define Project Base Test
+Extend `BaseApiTest` and implement `createRuntime()`. Wire `FrameworkConfig`, `CredentialManager`, and your domain clients once:
+
+```java
+public abstract class BaseProjectApiTest extends BaseApiTest {
+    protected UserClient userClient;
+
+    @Override
+    protected ApiTestRuntime createRuntime() {
+        FrameworkConfig config = FrameworkConfig.builder()
+                .service(ServiceConfig.builder("userService", Config.getBaseUrl())
+                        .authProfile("admin")
+                        .header("Content-Type", "application/json")
+                        .build())
+                .build();
+
+        CredentialManager credentials = new CredentialManager(Map.of(
+                "admin", actor -> AuthMaterial.bearer(login(actor), expiresAt)
+        ));
+
+        ApiClient api = new RestAssuredApiClient(config, credentials, new CurrentTestTraceSink());
+        userClient = new UserClient(api);
+
+        return new ApiTestRuntime(config, credentials, api);
+    }
+}
+```
+
+### 2. Create Domain Clients
+Wrap `ApiClient` inside domain-oriented clients. Clients only handle serialization, method, and endpoints:
+
+```java
+public final class UserClient {
+    private final ApiClient api;
+
+    public UserClient(ApiClient api) { this.api = api; }
+
+    public ApiResponse getUser(Actor actor, String userId) {
+        return api.execute(ApiRequest.get("userService", "/api/v1/users/" + userId)
+                .actor(actor)
+                .build());
+    }
+
+    public ApiResponse createUser(Actor actor, UserRequest body) {
+        return api.execute(ApiRequest.post("userService", "/api/v1/users")
+                .actor(actor)
+                .body(body)
+                .build());
+    }
+}
+```
+
+### 3. Write Test Classes
+Tests inherit `runtime()`, `api()`, `context()`, and domain clients:
+
+```java
+public class UserApiTest extends BaseProjectApiTest {
+
+    @Test
+    public void testGetUserSuccess() {
+        Actor admin = Actor.of("admin-user", "admin");
+        context().actor(admin);
+
+        ApiResponse response = userClient.getUser(admin, "user-123");
+        response.requireStatus(200);
+
+        Assert.assertEquals(response.json().path("data.status").asText(), "ACTIVE");
+    }
+}
+```
+
+### 4. Running & Viewing Traces
+- Run tests: `./mvnw test`
+- Redacted JSON traces for every request/response are automatically captured in `target/api-traces/`.
 
 See [architecture](docs/architecture.md), [configuration](docs/configuration.md),
 [flow preview](docs/framework-flow-preview.md), [test design](docs/test-design.md)
