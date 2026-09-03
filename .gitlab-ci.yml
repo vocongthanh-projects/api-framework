@@ -51,4 +51,9 @@ deploy:
     - if: '$CI_COMMIT_BRANCH == "develop"'
     - if: '$CI_COMMIT_TAG'
   script:
+    - |
+      if [ -n "$CI_COMMIT_TAG" ]; then
+        RELEASE_VERSION="${CI_COMMIT_TAG#v}"
+        ./mvnw $MAVEN_CLI_OPTS versions:set -DnewVersion="$RELEASE_VERSION" -DprocessAllModules=true -DgenerateBackupPoms=false
+      fi
     - ./mvnw $MAVEN_CLI_OPTS deploy -DskipTests -s ci_settings.xml
