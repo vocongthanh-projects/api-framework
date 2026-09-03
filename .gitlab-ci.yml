@@ -22,6 +22,7 @@ variables:
 stages:
   - validate
   - test
+  - deploy
 
 validate:
   stage: validate
@@ -42,3 +43,10 @@ test:
       - "*/target/api-traces/"
       - "*/target/surefire-reports/"
       - "*/target/*.jar"
+
+deploy:
+  stage: deploy
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+  script:
+    - ./mvnw $MAVEN_CLI_OPTS deploy -DskipTests -s ci_settings.xml
