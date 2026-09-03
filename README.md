@@ -92,6 +92,11 @@ If pulling packages from GitLab requires authentication, configure your Personal
 </settings>
 ```
 
+### Versioning & Release Strategy
+- **Continuous Integration (`develop` branch):** Automatically publishes `1.0.0-SNAPSHOT` for local verification and development.
+- **Production Releases (Git Tags):** Pushing a Git tag (e.g. `git tag v1.0.0 && git push origin v1.0.0`) triggers the pipeline to dynamically bump the reactor version to `1.0.0` before deploying to the Package Registry.
+- **Consumer Recommendation:** Pin a concrete release version (e.g. `1.0.0` or `1.1.0`) instead of `SNAPSHOT` in production consumer repositories (`api_hrm`, `api-map`) to ensure immutable, reliable test execution.
+
 ## Consumer usage & Step-by-step Guide
 
 ### 1. Define Project Base Test
