@@ -71,6 +71,27 @@ Add the GitLab Package Registry and framework dependencies to your consumer proj
 </dependencies>
 ```
 
+### Authentication for GitLab Package Registry (If private)
+If pulling packages from GitLab requires authentication, configure your Personal Access Token in `~/.m2/settings.xml`:
+
+```xml
+<settings>
+    <servers>
+        <server>
+            <id>gitlab-maven</id>
+            <configuration>
+                <httpHeaders>
+                    <property>
+                        <name>Private-Token</name>
+                        <value>${env.GITLAB_PRIVATE_TOKEN}</value>
+                    </property>
+                </httpHeaders>
+            </configuration>
+        </server>
+    </servers>
+</settings>
+```
+
 ## Consumer usage & Step-by-step Guide
 
 ### 1. Define Project Base Test
@@ -145,8 +166,20 @@ public class UserApiTest extends BaseProjectApiTest {
 ```
 
 ### 4. Running & Viewing Traces
-- Run tests: `./mvnw test`
-- Redacted JSON traces for every request/response are automatically captured in `target/api-traces/`.
+- **Run all tests:**
+  ```bash
+  ./mvnw test
+  ```
+- **Run with custom environment URL:**
+  ```bash
+  ./mvnw test -Dbase.url="http://qc-gtelmaps-maps.gtelots.dev"
+  ```
+- **Run specific test group or class:**
+  ```bash
+  ./mvnw test -Dgroups="smoke"
+  ./mvnw test -Dtest="UserApiTest"
+  ```
+- **Redacted JSON traces** for every request/response are automatically captured in `target/api-traces/`.
 
 See [architecture](docs/architecture.md), [configuration](docs/configuration.md),
 [flow preview](docs/framework-flow-preview.md), [test design](docs/test-design.md)
