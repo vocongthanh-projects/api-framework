@@ -1,6 +1,20 @@
 # CI/CD
 
-Recommended stages:
+## 1. Engine Pipeline (Current Framework Repository)
+
+The `api-framework` repository runs a fast, self-contained pipeline across 3 stages:
+
+```text
+validate -> test -> deploy
+```
+
+- **validate**: Compiles and packages all reactor modules with sources and javadocs attached (`-DskipTests package`).
+- **test**: Executes full test suite (`./mvnw verify`), ensuring 100% pass rate and publishing surefire JUnit XML reports + redacted API traces.
+- **deploy**: Deploys `api-framework-parent` and the 4 core libraries (`framework-core`, `framework-http-restassured`, `framework-fixtures`, `framework-testng`) along with their `-sources.jar` and `-javadoc.jar` to the GitLab Package Registry. `starter-example` is explicitly skipped.
+
+## 2. Consumer Test Suite Blueprint (Target Architecture for `api_hrm`, `api-map`)
+
+For consumer repositories containing large enterprise regression suites (hundreds or thousands of API test scenarios), the recommended target pipeline is:
 
 ```text
 validate -> unit -> smoke -> regression shards -> aggregate -> publish -> notify
