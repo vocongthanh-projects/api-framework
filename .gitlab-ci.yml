@@ -57,3 +57,18 @@ deploy:
         ./mvnw $MAVEN_CLI_OPTS versions:set -DnewVersion="$RELEASE_VERSION" -DprocessAllModules=true -DgenerateBackupPoms=false
       fi
     - ./mvnw $MAVEN_CLI_OPTS deploy -DskipTests -s ci_settings.xml
+
+pages:
+  stage: deploy
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "develop"'
+    - if: '$CI_COMMIT_TAG'
+  script:
+    - ./mvnw $MAVEN_CLI_OPTS javadoc:aggregate -Ddoclint=none -Dquiet=true
+    - mkdir -p public/apidocs
+    - cp -r target/reports/apidocs/* public/apidocs/
+    - cp -r docs/portal/* public/
+  artifacts:
+    paths:
+      - public
+    expire_in: 30 days

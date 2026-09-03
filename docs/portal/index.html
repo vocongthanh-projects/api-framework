@@ -1,0 +1,1061 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OTS QC Automation Hub — API, Web & Mobile Playbook</title>
+  <style>
+    :root {
+      --bg-primary: #0b0f19;
+      --bg-secondary: #111827;
+      --bg-card: rgba(17, 24, 39, 0.85);
+      --border-color: #1f2937;
+      --text-primary: #f3f4f6;
+      --text-secondary: #9ca3af;
+      --text-muted: #6b7280;
+      --accent-api: #38bdf8;
+      --accent-web: #34d399;
+      --accent-mobile: #a78bfa;
+      --accent-ci: #f59e0b;
+      --code-bg: #030712;
+      --code-border: #1e293b;
+      --hover-bg: rgba(255, 255, 255, 0.05);
+      --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--font-family);
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.6;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    /* Header */
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(11, 15, 25, 0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border-color);
+      padding: 0.75rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-weight: 700;
+      font-size: 1.15rem;
+      letter-spacing: -0.025em;
+    }
+
+    .brand-badge {
+      font-size: 0.75rem;
+      padding: 0.2rem 0.6rem;
+      border-radius: 9999px;
+      background: linear-gradient(135deg, #0284c7, #6366f1);
+      color: #fff;
+      font-weight: 600;
+    }
+
+    .search-box {
+      position: relative;
+      width: 320px;
+    }
+
+    .search-input {
+      width: 100%;
+      padding: 0.5rem 1rem 0.5rem 2.2rem;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      color: var(--text-primary);
+      font-size: 0.875rem;
+      outline: none;
+      transition: all 0.2s;
+    }
+
+    .search-input:focus {
+      border-color: var(--accent-api);
+      box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 0.75rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+
+    .header-links {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .btn-link {
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 0.875rem;
+      padding: 0.4rem 0.8rem;
+      border-radius: 6px;
+      transition: all 0.2s;
+      border: 1px solid transparent;
+    }
+
+    .btn-link:hover {
+      color: var(--text-primary);
+      background: var(--hover-bg);
+      border-color: var(--border-color);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #0284c7, #2563eb);
+      color: #fff;
+      font-weight: 600;
+      border: none;
+    }
+
+    .btn-primary:hover {
+      opacity: 0.95;
+      box-shadow: 0 0 12px rgba(37, 99, 235, 0.4);
+    }
+
+    /* Main Layout */
+    .layout {
+      display: flex;
+      flex: 1;
+    }
+
+    /* Sidebar */
+    aside {
+      width: 280px;
+      background: var(--bg-secondary);
+      border-right: 1px solid var(--border-color);
+      padding: 1.5rem 1rem;
+      position: sticky;
+      top: 61px;
+      height: calc(100vh - 61px);
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .nav-section-title {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      margin-bottom: 0.5rem;
+      font-weight: 700;
+      padding-left: 0.5rem;
+    }
+
+    .nav-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+    }
+
+    .nav-item a {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      padding: 0.5rem 0.75rem;
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 0.875rem;
+      border-radius: 6px;
+      transition: all 0.15s;
+    }
+
+    .nav-item a:hover {
+      color: var(--text-primary);
+      background: var(--hover-bg);
+    }
+
+    .nav-item.active a {
+      color: var(--accent-api);
+      background: rgba(56, 189, 248, 0.1);
+      font-weight: 600;
+    }
+
+    .tag-pill {
+      font-size: 0.65rem;
+      padding: 0.1rem 0.4rem;
+      border-radius: 4px;
+      font-weight: 700;
+      margin-left: auto;
+    }
+    .tag-api { background: rgba(56, 189, 248, 0.15); color: var(--accent-api); }
+    .tag-web { background: rgba(52, 211, 153, 0.15); color: var(--accent-web); }
+    .tag-mobile { background: rgba(167, 139, 250, 0.15); color: var(--accent-mobile); }
+
+    /* Content Area */
+    main {
+      flex: 1;
+      padding: 2.5rem 3rem;
+      max-width: 1100px;
+    }
+
+    .hero-banner {
+      background: linear-gradient(135deg, rgba(30, 41, 59, 0.6), rgba(15, 23, 42, 0.8));
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 2.5rem;
+      margin-bottom: 3rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-banner::before {
+      content: "";
+      position: absolute;
+      top: -50%;
+      right: -20%;
+      width: 300px;
+      height: 300px;
+      background: radial-gradient(circle, rgba(56, 189, 248, 0.15), transparent 70%);
+      pointer-events: none;
+    }
+
+    .hero-title {
+      font-size: 2.25rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      margin-bottom: 0.75rem;
+      background: linear-gradient(135deg, #ffffff, #94a3b8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hero-subtitle {
+      font-size: 1.1rem;
+      color: var(--text-secondary);
+      max-width: 700px;
+      margin-bottom: 1.5rem;
+    }
+
+    .framework-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 3rem;
+    }
+
+    .f-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 1.5rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      position: relative;
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .f-card:hover {
+      transform: translateY(-3px);
+      border-color: rgba(255, 255, 255, 0.2);
+      box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.4);
+    }
+
+    .f-card.card-api { border-top: 3px solid var(--accent-api); }
+    .f-card.card-web { border-top: 3px solid var(--accent-web); }
+    .f-card.card-mobile { border-top: 3px solid var(--accent-mobile); }
+
+    .f-card-icon {
+      font-size: 1.75rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .f-card-title {
+      font-size: 1.2rem;
+      font-weight: 700;
+      margin-bottom: 0.4rem;
+    }
+
+    .f-card-desc {
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+    }
+
+    /* Section Styling */
+    section {
+      margin-bottom: 4rem;
+      scroll-margin-top: 80px;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 1.25rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .section-title {
+      font-size: 1.6rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .section-badge {
+      font-size: 0.8rem;
+      padding: 0.2rem 0.6rem;
+      border-radius: 6px;
+      font-weight: 600;
+    }
+
+    h3 {
+      font-size: 1.2rem;
+      font-weight: 600;
+      margin: 1.5rem 0 0.75rem 0;
+      color: #e2e8f0;
+    }
+
+    p {
+      margin-bottom: 1rem;
+      color: var(--text-secondary);
+      font-size: 0.95rem;
+    }
+
+    /* Code Blocks */
+    .code-wrapper {
+      position: relative;
+      background: var(--code-bg);
+      border: 1px solid var(--code-border);
+      border-radius: 8px;
+      margin: 1rem 0 1.5rem 0;
+      overflow: hidden;
+    }
+
+    .code-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.5rem 1rem;
+      background: rgba(255, 255, 255, 0.03);
+      border-bottom: 1px solid var(--code-border);
+      font-size: 0.75rem;
+      font-family: var(--font-mono);
+      color: var(--text-muted);
+    }
+
+    .copy-btn {
+      background: transparent;
+      border: 1px solid var(--border-color);
+      color: var(--text-secondary);
+      font-size: 0.75rem;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .copy-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+    }
+
+    pre {
+      padding: 1.25rem;
+      overflow-x: auto;
+      font-family: var(--font-mono);
+      font-size: 0.875rem;
+      color: #cbd5e1;
+      line-height: 1.5;
+    }
+
+    /* Table */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1.25rem 0;
+      font-size: 0.875rem;
+    }
+
+    th, td {
+      padding: 0.75rem 1rem;
+      text-align: left;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    th {
+      background: var(--bg-secondary);
+      color: #f1f5f9;
+      font-weight: 600;
+    }
+
+    tr:hover td {
+      background: var(--hover-bg);
+    }
+
+    /* Alerts */
+    .alert {
+      border-left: 4px solid var(--accent-api);
+      background: rgba(56, 189, 248, 0.08);
+      padding: 1rem 1.25rem;
+      border-radius: 0 8px 8px 0;
+      margin: 1.25rem 0;
+      font-size: 0.9rem;
+    }
+    .alert-title {
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 0.25rem;
+    }
+    .alert.alert-warning {
+      border-color: var(--accent-ci);
+      background: rgba(245, 158, 11, 0.08);
+    }
+
+    /* Tabs */
+    .tab-container {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 0.5rem;
+    }
+
+    .tab-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      padding: 0.4rem 0.8rem;
+      font-size: 0.85rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.15s;
+    }
+
+    .tab-btn.active {
+      color: #fff;
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    /* Responsive */
+    @media (max-width: 900px) {
+      aside { display: none; }
+      main { padding: 1.5rem; }
+      .search-box { width: 200px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header>
+    <div class="brand">
+      <span>⚡ OTS Quality Control</span>
+      <span class="brand-badge">Automation Playbook</span>
+    </div>
+
+    <div class="search-box">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="global-search" class="search-input" placeholder="Tìm kiếm API, Playwright, Appium...">
+    </div>
+
+    <div class="header-links">
+      <a href="apidocs/index.html" target="_blank" class="btn-link btn-primary">📖 Xem Javadoc API</a>
+      <a href="http://10.0.0.40/qc-quality-control/framework-api" target="_blank" class="btn-link">GitLab Repo</a>
+    </div>
+  </header>
+
+  <div class="layout">
+    <!-- Sidebar -->
+    <aside>
+      <div>
+        <div class="nav-section-title">Tổng quan</div>
+        <ul class="nav-list">
+          <li class="nav-item"><a href="#intro">Giới thiệu chung</a></li>
+          <li class="nav-item"><a href="#rules">Quy tắc chuẩn (Rules)</a></li>
+        </ul>
+      </div>
+
+      <div>
+        <div class="nav-section-title">🚀 1. API Automation</div>
+        <ul class="nav-list">
+          <li class="nav-item"><a href="#api-arch">Kiến trúc & Cơ chế <span class="tag-pill tag-api">REST</span></a></li>
+          <li class="nav-item"><a href="#api-import">Cách Import pom.xml</a></li>
+          <li class="nav-item"><a href="#api-basetest">Khởi tạo Base Test</a></li>
+          <li class="nav-item"><a href="#api-client">Tạo Domain Client</a></li>
+          <li class="nav-item"><a href="#api-fixtures">Fixtures & Polling</a></li>
+          <li class="nav-item"><a href="#api-cheatsheet">Bảng tra cứu Class & Hàm</a></li>
+        </ul>
+      </div>
+
+      <div>
+        <div class="nav-section-title">🌐 2. Web Automation</div>
+        <ul class="nav-list">
+          <li class="nav-item"><a href="#web-setup">Cài đặt Playwright <span class="tag-pill tag-web">WEB</span></a></li>
+          <li class="nav-item"><a href="#web-pom">Mô hình Page Object Model</a></li>
+          <li class="nav-item"><a href="#web-locators">Locators & Assertions</a></li>
+          <li class="nav-item"><a href="#web-trace">Trace Viewer & Video</a></li>
+        </ul>
+      </div>
+
+      <div>
+        <div class="nav-section-title">📱 3. Mobile Automation</div>
+        <ul class="nav-list">
+          <li class="nav-item"><a href="#mobile-setup">Appium 2.x Setup <span class="tag-pill tag-mobile">APP</span></a></li>
+          <li class="nav-item"><a href="#mobile-caps">Android & iOS Options</a></li>
+          <li class="nav-item"><a href="#mobile-gestures">Thao tác Vuốt (W3C Swipe)</a></li>
+          <li class="nav-item"><a href="#mobile-pom">Mobile Page Object</a></li>
+        </ul>
+      </div>
+
+      <div>
+        <div class="nav-section-title">⚙️ CI/CD & Báo Cáo</div>
+        <ul class="nav-list">
+          <li class="nav-item"><a href="#cicd-pipeline">GitLab CI Template</a></li>
+        </ul>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main>
+      <!-- Hero Banner -->
+      <div class="hero-banner" id="intro">
+        <h1 class="hero-title">QC Automation Hub</h1>
+        <p class="hero-subtitle">Cẩm nang hướng dẫn toàn diện bộ ba vũ khí tự động hóa kiểm thử cho QC Team: <strong>API (RestAssured)</strong>, <strong>Web (Playwright)</strong> và <strong>Mobile (Appium)</strong>.</p>
+        <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+          <a href="#api-arch" class="btn-link btn-primary">Bắt đầu với API Testing →</a>
+          <a href="#web-setup" class="btn-link" style="border: 1px solid var(--border-color)">Web Testing (Playwright) →</a>
+          <a href="#mobile-setup" class="btn-link" style="border: 1px solid var(--border-color)">Mobile Testing (Appium) →</a>
+        </div>
+      </div>
+
+      <!-- Framework 3 Cards -->
+      <div class="framework-cards">
+        <a href="#api-arch" class="f-card card-api">
+          <div class="f-card-icon">🚀</div>
+          <div class="f-card-title">API Automation</div>
+          <div class="f-card-desc">Framework lõi RestAssured đa module: Tự retry, tự refresh token khi gặp 401, che giấu mật khẩu, sinh trace JSON.</div>
+        </a>
+        <a href="#web-setup" class="f-card card-web">
+          <div class="f-card-icon">🌐</div>
+          <div class="f-card-title">Web Automation</div>
+          <div class="f-card-desc">Microsoft Playwright tốc độ cao: Tự động chờ (auto-wait), đa luồng, hỗ trợ trace viewer ghi hình từng thao tác.</div>
+        </a>
+        <a href="#mobile-setup" class="f-card card-mobile">
+          <div class="f-card-icon">📱</div>
+          <div class="f-card-title">Mobile Automation</div>
+          <div class="f-card-desc">Appium 2.x chạy trên cả Android (UiAutomator2) và iOS (XCUITest): Chuẩn W3C Gestures, xử lý native alert.</div>
+        </a>
+      </div>
+
+      <!-- RULES -->
+      <section id="rules">
+        <div class="section-header">
+          <span style="font-size: 1.5rem;">⚖️</span>
+          <h2 class="section-title">Quy tắc chuẩn bất khả xâm phạm (Core Standards)</h2>
+        </div>
+        <div class="alert alert-warning">
+          <div class="alert-title">QUY TẮC SỐ 1: TUYỆT ĐỐI KHÔNG HARDCODE</div>
+          Không được hardcode URL môi trường, IP, domain, username, password, token trong source code hay file properties. Mọi cấu hình phải lấy qua System Properties (`-D`), Biến môi trường hoặc `config-local.properties` (được ignore trên git).
+        </div>
+        <table>
+          <thead>
+            <tr><th>Quy tắc</th><th>Lý do & Cách áp dụng</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><strong>Không dùng `RestAssured.given()` trực tiếp</strong></td><td>Mọi request phải đi qua `ApiClient` để đảm bảo được ghi trace, tự động retry an toàn và che giấu secret.</td></tr>
+            <tr><td><strong>Không dùng `Thread.sleep` đứng im</strong></td><td>Dùng `Eventually` trong `framework-fixtures` để kiểm tra theo điều kiện (polling), giúp test chạy nhanh hơn 50-80%.</td></tr>
+            <tr><td><strong>Dọn rác dữ liệu ngay sau khi tạo</strong></td><td>Sử dụng `ResourceLedger` để đăng ký hành động cleanup theo cơ chế LIFO (tạo trước - xóa sau cùng).</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- ============================================================ -->
+      <!-- SECTION 1: API RESTASSURED -->
+      <!-- ============================================================ -->
+      <section id="api-arch">
+        <div class="section-header">
+          <span style="font-size: 1.5rem;">🚀</span>
+          <h2 class="section-title">1. API Automation — RestAssured Framework</h2>
+          <span class="section-badge tag-api">framework-*</span>
+        </div>
+
+        <p>Framework API được đóng gói thành 4 module độc lập phát hành trên GitLab Package Registry: <code>framework-core</code>, <code>framework-http-restassured</code>, <code>framework-fixtures</code>, và <code>framework-testng</code>.</p>
+
+        <h3 id="api-import">1.1 Khai báo `pom.xml` trong dự án Consumer</h3>
+        <p>Mở file <code>pom.xml</code> trong dự án test của bạn (như <code>api-map</code>, <code>api_hrm</code>) và thêm kho thư viện GitLab + dependencies:</p>
+
+        <div class="code-wrapper">
+          <div class="code-header"><span>pom.xml</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+          <pre><code>&lt;!-- 1. Khai báo kho GitLab Package Registry --&gt;
+&lt;repositories&gt;
+    &lt;repository&gt;
+        &lt;id&gt;gitlab-maven&lt;/id&gt;
+        &lt;url&gt;http://10.0.0.40/api/v4/groups/qc-quality-control/-/packages/maven&lt;/url&gt;
+    &lt;/repository&gt;
+&lt;/repositories&gt;
+
+&lt;properties&gt;
+    &lt;framework.version&gt;1.0.0-SNAPSHOT&lt;/framework.version&gt;
+&lt;/properties&gt;
+
+&lt;dependencies&gt;
+    &lt;!-- Vòng đời TestNG, TestContext & Tracing --&gt;
+    &lt;dependency&gt;
+        &lt;groupId&gt;vn.ots.qc&lt;/groupId&gt;
+        &lt;artifactId&gt;framework-testng&lt;/artifactId&gt;
+        &lt;version&gt;${framework.version}&lt;/version&gt;
+    &lt;/dependency&gt;
+
+    &lt;!-- Động cơ HTTP RestAssured (Tự retry, che giấu mật khẩu, tự refresh 401) --&gt;
+    &lt;dependency&gt;
+        &lt;groupId&gt;vn.ots.qc&lt;/groupId&gt;
+        &lt;artifactId&gt;framework-http-restassured&lt;/artifactId&gt;
+        &lt;version&gt;${framework.version}&lt;/version&gt;
+    &lt;/dependency&gt;
+
+    &lt;!-- Tiện ích tạo data ngẫu nhiên UniqueData, Eventually, ResourceLedger --&gt;
+    &lt;dependency&gt;
+        &lt;groupId&gt;vn.ots.qc&lt;/groupId&gt;
+        &lt;artifactId&gt;framework-fixtures&lt;/artifactId&gt;
+        &lt;version&gt;${framework.version}&lt;/version&gt;
+    &lt;/dependency&gt;
+&lt;/dependencies&gt;</code></pre>
+        </div>
+
+        <h3 id="api-basetest">1.2 Khởi tạo Base Test (`createRuntime()`)</h3>
+        <p>Kế thừa <code>BaseApiTest</code> và implement cấu hình một lần duy nhất cho toàn bộ dự án:</p>
+
+        <div class="code-wrapper">
+          <div class="code-header"><span>BaseProjectApiTest.java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+          <pre><code>public abstract class BaseProjectApiTest extends BaseApiTest {
+    protected UserClient userClient;
+
+    @Override
+    protected ApiTestRuntime createRuntime() {
+        FrameworkConfig config = FrameworkConfig.builder()
+                .service(ServiceConfig.builder("userService", Config.getBaseUrl())
+                        .authProfile("admin")
+                        .header("Content-Type", "application/json")
+                        .build())
+                .build();
+
+        CredentialManager credentials = new CredentialManager(Map.of(
+                "admin", actor -> AuthMaterial.bearer(loginAndGetToken(actor), Instant.now().plusSeconds(3600))
+        ));
+
+        ApiClient api = new RestAssuredApiClient(config, credentials, new CurrentTestTraceSink());
+        userClient = new UserClient(api);
+
+        return new ApiTestRuntime(config, credentials, api);
+    }
+}</code></pre>
+        </div>
+
+        <h3 id="api-client">1.3 Tạo Domain Client & Test Case</h3>
+        <p>Tách biệt tầng Client (chỉ chứa endpoint) và tầng Test (chứa logic kiểm thử):</p>
+
+        <div class="code-wrapper">
+          <div class="code-header"><span>UserClient.java & UserApiTest.java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+          <pre><code>// 1. DOMAIN CLIENT: Chỉ nhận ApiClient và bắn request
+public class UserClient {
+    private final ApiClient api;
+    public UserClient(ApiClient api) { this.api = api; }
+
+    public ApiResponse getUserDetail(Actor actor, String userId) {
+        return api.execute(ApiRequest.get("userService", "/api/v1/users/" + userId)
+                .actor(actor)
+                .build());
+    }
+}
+
+// 2. TEST CASE: Kế thừa BaseProjectApiTest
+public class UserApiTest extends BaseProjectApiTest {
+    @Test
+    public void testGetUserSuccess() {
+        Actor admin = Actor.of("admin_user", "admin");
+        context().actor(admin);
+
+        ApiResponse res = userClient.getUserDetail(admin, "U123");
+        res.requireStatus(200); // Tự động throw lỗi kèm trace nếu status code khác 200
+
+        Assert.assertEquals(res.json().path("data.status").asText(), "ACTIVE");
+    }
+}</code></pre>
+        </div>
+
+        <h3 id="api-fixtures">1.4 Fixtures: Dọn dẹp dữ liệu & Polling thông minh</h3>
+        <div class="code-wrapper">
+          <div class="code-header"><span>FixtureExamples.java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+          <pre><code>// 1. Tạo data ngẫu nhiên không bao giờ trùng
+String email = UniqueData.email("test", "gtel.vn"); // -> test.a1b2c3d4e5f6@gtel.vn
+String username = UniqueData.value("qc_user");     // -> qc_user-a1b2c3d4e5f6
+
+// 2. Đăng ký dọn dẹp data sau khi test chạy xong (kể cả khi test bị fail)
+resources().register("cleanUser", () -> userClient.deleteUser(createdUserId));
+
+// 3. Chờ trạng thái hoàn tất (Polling thay thế Thread.sleep)
+Eventually.polling()
+    .timeout(Duration.ofSeconds(15))
+    .until(() -> userClient.getStatus(orderId).equals("COMPLETED"));</code></pre>
+        </div>
+
+        <h3 id="api-cheatsheet">1.5 Bảng tra cứu Class & Hàm API thường dùng</h3>
+        <table>
+          <thead>
+            <tr><th>Class</th><th>Hàm quan trọng</th><th>Mục đích</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>ApiRequest</code></td><td><code>.get()</code>, <code>.post()</code>, <code>.body()</code>, <code>.header()</code>, <code>.actor()</code></td><td>Tạo request chuẩn hóa không lộ RestAssured</td></tr>
+            <tr><td><code>ApiResponse</code></td><td><code>.requireStatus(200)</code>, <code>.json()</code>, <code>.as(Class)</code>, <code>.body()</code></td><td>Assert status và trích xuất dữ liệu JSON</td></tr>
+            <tr><td><code>Actor</code></td><td><code>Actor.of("user", "admin")</code></td><td>Định danh người dùng thực hiện kịch bản test</td></tr>
+            <tr><td><code>UniqueData</code></td><td><code>.email()</code>, <code>.value()</code>, <code>.suffix()</code></td><td>Sinh dữ liệu test ngẫu nhiên không trùng lặp</td></tr>
+            <tr><td><code>Eventually</code></td><td><code>.polling().timeout().until()</code></td><td>Chờ đợi có điều kiện, giảm thời gian chạy test</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- ============================================================ -->
+      <!-- SECTION 2: WEB PLAYWRIGHT -->
+      <!-- ============================================================ -->
+      <section id="web-setup">
+        <div class="section-header">
+          <span style="font-size: 1.5rem;">🌐</span>
+          <h2 class="section-title">2. Web Automation — Microsoft Playwright</h2>
+          <span class="section-badge tag-web">PLAYWRIGHT (Java)</span>
+        </div>
+
+        <p>Microsoft Playwright là framework kiểm thử Web hiện đại nhất hiện nay: Tự động đợi phần tử (Auto-wait), chạy đa luồng cực nhanh, ghi trace/video và hỗ trợ đầy đủ Chromium, Firefox, WebKit.</p>
+
+        <h3>2.1 Khai báo Dependency Playwright</h3>
+        <div class="code-wrapper">
+          <div class="code-header"><span>pom.xml</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+          <pre><code>&lt;dependency&gt;
+    &lt;groupId&gt;com.microsoft.playwright&lt;/groupId&gt;
+    &lt;artifactId&gt;playwright&lt;/artifactId&gt;
+    &lt;version&gt;1.49.0&lt;/version&gt;
+    &lt;scope&gt;test&lt;/scope&gt;
+&lt;/dependency&gt;</code></pre>
+        </div>
+
+        <h3 id="web-pom">2.2 Base Web Test & Khởi tạo Playwright</h3>
+        <div class="code-wrapper">
+          <div class="code-header"><span>BaseWebTest.java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+          <pre><code>public abstract class BaseWebTest {
+    protected static Playwright playwright;
+    protected static Browser browser;
+    protected BrowserContext context;
+    protected Page page;
+
+    @BeforeSuite
+    public void setupSuite() {
+        playwright = Playwright.create();
+        boolean headless = Boolean.parseBoolean(System.getProperty("headless", "true"));
+        browser = playwright.chromium().launch(new BrowserType.LaunchOptions().setHeadless(headless));
+    }
+
+    @BeforeMethod
+    public void setupMethod(Method method) {
+        context = browser.newContext(new Browser.NewContextOptions().setViewportSize(1920, 1080));
+        // Bật ghi hình Trace Viewer
+        context.tracing().start(new Tracing.StartOptions().setScreenshots(true).setSnapshots(true));
+        page = context.newPage();
+    }
+
+    @AfterMethod
+    public void tearDownMethod(ITestResult result) {
+        if (!result.isSuccess()) {
+            // Lưu Trace file khi test fail để mở xem lại
+            context.tracing().stop(new Tracing.StopOptions().setPath(Path.of("target/traces/" + result.getName() + ".zip")));
+        }
+        context.close();
+    }
+
+    @AfterSuite
+    public void tearDownSuite() {
+        browser.close();
+        playwright.close();
+    }
+}</code></pre>
+        </div>
+
+        <h3 id="web-locators">2.3 Page Object Model (POM) & Locators chuẩn</h3>
+        <p>Tuyệt đối tránh dùng XPath tuyệt đối hoặc ID dễ đổi. Hãy dùng Locators hướng người dùng (User-facing locators):</p>
+
+        <div class="code-wrapper">
+          <div class="code-header"><span>LoginPage.java & WebLoginTest.java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+          <pre><code>// 1. PAGE OBJECT MODEL
+public class LoginPage {
+    private final Page page;
+
+    public LoginPage(Page page) { this.page = page; }
+
+    public void navigate() { page.navigate(Config.getBaseUrl() + "/login"); }
+
+    public void login(String username, String password) {
+        // Playwright khuyến khích getByRole, getByPlaceholder, getByLabel
+        page.getByPlaceholder("Tên đăng nhập").fill(username);
+        page.getByPlaceholder("Mật khẩu").fill(password);
+        page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Đăng nhập")).click();
+    }
+
+    public Locator getErrorMessage() {
+        return page.locator(".alert-danger");
+    }
+}
+
+// 2. TEST CLASS
+public class WebLoginTest extends BaseWebTest {
+    @Test
+    public void testLoginWithInvalidPassword() {
+        LoginPage loginPage = new LoginPage(page);
+        loginPage.navigate();
+        loginPage.login("thanhvc", "sai_mat_khau");
+
+        // Playwright Assertions tự động chờ phần tử xuất hiện
+        assertThat(loginPage.getErrorMessage()).isVisible();
+        assertThat(loginPage.getErrorMessage()).containsText("Sai mật khẩu");
+    }
+}</code></pre>
+        </div>
+
+        <h3 id="web-trace">2.4 Xem lại Trace Viewer khi Test Fail</h3>
+        <p>Khi test fail, mở file trace zip được sinh ra để tua lại từng thao tác như xem video:</p>
+        <div class="code-wrapper">
+          <div class="code-header"><span>Terminal</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+          <pre><code>mvn exec:java -e -Dexec.mainClass=com.microsoft.playwright.CLI -Dexec.args="show-trace target/traces/testLoginWithInvalidPassword.zip"</code></pre>
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <!-- SECTION 3: MOBILE APPIUM -->
+      <!-- ============================================================ -->
+      <section id="mobile-setup">
+        <div class="section-header">
+          <span style="font-size: 1.5rem;">📱</span>
+          <h2 class="section-title">3. Mobile Automation — Appium 2.x (Android & iOS)</h2>
+          <span class="section-badge tag-mobile">APPIUM 2.X</span>
+        </div>
+
+        <p>Appium 2.x là giải pháp kiểm thử đa nền tảng cho ứng dụng di động Native & Hybrid, sử dụng driver <strong>UiAutomator2</strong> cho Android và <strong>XCUITest</strong> cho iOS.</p>
+
+        <h3>3.1 Khai báo Appium Java Client</h3>
+        <div class="code-wrapper">
+          <div class="code-header"><span>pom.xml</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+          <pre><code>&lt;dependency&gt;
+    &lt;groupId&gt;io.appium&lt;/groupId&gt;
+    &lt;artifactId&gt;java-client&lt;/artifactId&gt;
+    &lt;version&gt;9.4.0&lt;/version&gt;
+    &lt;scope&gt;test&lt;/scope&gt;
+&lt;/dependency&gt;</code></pre>
+        </div>
+
+        <h3 id="mobile-caps">3.2 Cấu hình Driver cho Android & iOS</h3>
+        <div class="code-wrapper">
+          <div class="code-header"><span>BaseMobileTest.java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+          <pre><code>public abstract class BaseMobileTest {
+    protected AppiumDriver driver;
+
+    @BeforeMethod
+    public void setupMobileDriver() throws MalformedURLException {
+        String platform = System.getProperty("platform", "android").toLowerCase();
+        URL appiumServer = new URL(System.getProperty("appium.url", "http://127.0.0.1:4723"));
+
+        if (platform.equals("android")) {
+            UiAutomator2Options options = new UiAutomator2Options()
+                    .setDeviceName("Pixel_7_Pro")
+                    .setApp(System.getProperty("app.path"))
+                    .setAutomationName("UiAutomator2")
+                    .autoGrantPermissions();
+            driver = new AndroidDriver(appiumServer, options);
+        } else {
+            XCUITestOptions options = new XCUITestOptions()
+                    .setDeviceName("iPhone 15 Pro")
+                    .setApp(System.getProperty("app.path"))
+                    .setAutomationName("XCUITest")
+                    .setAutoAcceptAlerts(true);
+            driver = new IOSDriver(appiumServer, options);
+        }
+    }
+
+    @AfterMethod
+    public void tearDownMobileDriver() {
+        if (driver != null) driver.quit();
+    }
+}</code></pre>
+        </div>
+
+        <h3 id="mobile-gestures">3.3 Thao tác Vuốt màn hình chuẩn W3C Actions</h3>
+        <p>Trong Appium 2.x, TouchAction cũ đã bị loại bỏ hoàn toàn. Thay vào đó, sử dụng W3C Pointer Actions:</p>
+
+        <div class="code-wrapper">
+          <div class="code-header"><span>MobileGestures.java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+          <pre><code>public final class MobileGestures {
+    public static void swipeUp(AppiumDriver driver) {
+        Dimension size = driver.manage().window().getSize();
+        int startX = size.width / 2;
+        int startY = (int) (size.height * 0.8);
+        int endY = (int) (size.height * 0.2);
+
+        PointerInput finger = new PointerInput(PointerInput.Kind.TOUCH, "finger");
+        Sequence sequence = new Sequence(finger, 1)
+                .addAction(finger.createPointerMove(Duration.ZERO, PointerInput.Origin.viewport(), startX, startY))
+                .addAction(finger.createPointerDown(PointerInput.MouseButton.LEFT.asArg()))
+                .addAction(finger.createPointerMove(Duration.ofMillis(600), PointerInput.Origin.viewport(), startX, endY))
+                .addAction(finger.createPointerUp(PointerInput.MouseButton.LEFT.asArg()));
+
+        driver.perform(Collections.singletonList(sequence));
+    }
+}</code></pre>
+        </div>
+
+        <h3 id="mobile-pom">3.4 Mobile Page Object (Dùng chung cho cả Android và iOS)</h3>
+        <div class="code-wrapper">
+          <div class="code-header"><span>MobileLoginPage.java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+          <pre><code>public class MobileLoginPage {
+    private final AppiumDriver driver;
+
+    @AndroidFindBy(id = "vn.ots.maps:id/edt_username")
+    @iOSXCUITFindBy(accessibility = "input-username")
+    private WebElement usernameInput;
+
+    @AndroidFindBy(id = "vn.ots.maps:id/edt_password")
+    @iOSXCUITFindBy(accessibility = "input-password")
+    private WebElement passwordInput;
+
+    @AndroidFindBy(id = "vn.ots.maps:id/btn_login")
+    @iOSXCUITFindBy(accessibility = "btn-submit")
+    private WebElement loginButton;
+
+    public MobileLoginPage(AppiumDriver driver) {
+        this.driver = driver;
+        PageFactory.initElements(new AppiumFieldDecorator(driver, Duration.ofSeconds(10)), this);
+    }
+
+    public void login(String user, String pass) {
+        usernameInput.sendKeys(user);
+        passwordInput.sendKeys(pass);
+        loginButton.click();
+    }
+}</code></pre>
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <!-- SECTION 4: CI/CD TEMPLATE -->
+      <!-- ============================================================ -->
+      <section id="cicd-pipeline">
+        <div class="section-header">
+          <span style="font-size: 1.5rem;">⚙️</span>
+          <h2 class="section-title">4. CI/CD Pipeline Template cho GitLab</h2>
+        </div>
+
+        <p>Mẫu cấu hình GitLab CI để chạy kiểm thử tự động trên CI Runner có sẵn JDK 17:</p>
+
+        <div class="code-wrapper">
+          <div class="code-header"><span>.gitlab-ci.yml</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+          <pre><code>image: eclipse-temurin:17-jdk
+
+stages:
+  - test
+  - report
+
+api_tests:
+  stage: test
+  script:
+    - chmod +x mvnw
+    - ./mvnw test -Dgroups="smoke" -Dbase.url="$STAGING_API_URL"
+  artifacts:
+    when: always
+    reports:
+      junit: target/surefire-reports/TEST-*.xml
+    paths:
+      - target/api-traces/
+
+web_playwright_tests:
+  stage: test
+  image: mcr.microsoft.com/playwright/java:v1.49.0-jammy
+  script:
+    - ./mvnw test -Dtest=WebLoginTest -Dheadless=true
+  artifacts:
+    when: on_failure
+    paths:
+      - target/traces/</code></pre>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <script>
+    // Copy button functionality
+    function copyCode(button) {
+      const code = button.closest('.code-wrapper').querySelector('pre code').innerText;
+      navigator.clipboard.writeText(code).then(() => {
+        const orig = button.innerText;
+        button.innerText = 'Đã chép! ✓';
+        button.style.borderColor = '#34d399';
+        button.style.color = '#34d399';
+        setTimeout(() => {
+          button.innerText = orig;
+          button.style.borderColor = '';
+          button.style.color = '';
+        }, 2000);
+      });
+    }
+
+    // Live search filter
+    const searchInput = document.getElementById('global-search');
+    searchInput.addEventListener('input', (e) => {
+      const query = e.target.value.toLowerCase().trim();
+      const sections = document.querySelectorAll('main section');
+      
+      sections.forEach(sec => {
+        if (!query) {
+          sec.style.display = '';
+          return;
+        }
+        const text = sec.innerText.toLowerCase();
+        sec.style.display = text.includes(query) ? '' : 'none';
+      });
+    });
+
+    // Active sidebar link on scroll
+    window.addEventListener('scroll', () => {
+      const sections = document.querySelectorAll('section');
+      const navItems = document.querySelectorAll('.nav-item');
+      let current = '';
+
+      sections.forEach(sec => {
+        const top = sec.offsetTop - 120;
+        if (pageYOffset >= top) {
+          current = sec.getAttribute('id');
+        }
+      });
+
+      navItems.forEach(item => {
+        item.classList.remove('active');
+        const link = item.querySelector('a');
+        if (link && link.getAttribute('href') === '#' + current) {
+          item.classList.add('active');
+        }
+      });
+    });
+  </script>
+</body>
+</html>
