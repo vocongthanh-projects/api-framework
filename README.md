@@ -191,7 +191,7 @@ public class UserApiTest extends BaseProjectApiTest {
   ```
 - **Chạy với URL môi trường tùy chỉnh:**
   ```bash
-  ./mvnw test -Dbase.url="http://qc-gtelmaps-maps.gtelots.dev"
+  ./mvnw test -Dbase.url="https://your-application.example"
   ```
 - **Chạy 1 group hoặc class test cụ thể:**
   ```bash
