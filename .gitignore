@@ -7,4 +7,5 @@ target/
 config-local.properties
 allure-results/
 api-traces/
+public/
 
