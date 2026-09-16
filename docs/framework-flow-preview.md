@@ -212,7 +212,7 @@ public abstract class HrmApiTest extends BaseApiTest {
 ```
 
 ```text
-api_hrm / api-map
+your-consumer-project
 ├── config       FrameworkConfig from the environment and secret provider
 ├── auth         AuthProvider for each authentication profile
 ├── clients      Domain clients; never call RestAssured directly

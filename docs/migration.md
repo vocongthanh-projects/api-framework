@@ -1,22 +1,22 @@
-# Migration from api-map and api_hrm
+# Migration guide for consumer projects
 
 ## Phase 0: secure and freeze
 
-1. Rotate the exposed GitLab token, Cloudflare cookie and XSRF token.
+1. Rotate any exposed tokens or session credentials in the consumer project.
 2. Run secret scanning over Git history.
 3. Create a reproducible baseline commit for each consumer project.
 4. Pin JDK 17 for Maven and CI.
 5. Record baseline pass/fail/skip counts and runtime.
 
-## Phase 1: api-map pilot
+## Phase 1: pilot domain
 
-1. Implement its encrypted login as an `AuthProvider` in `api-map`, not in framework core.
-2. Create Maps domain clients around `ApiClient`.
+1. Implement its encrypted login as an `AuthProvider`, not in framework core.
+2. Create domain clients around `ApiClient`.
 3. Migrate login, register, forgot-password and logout tests.
 4. Compare old and new results for several CI runs.
 5. Remove copied `RequestHelper`, `RequestExecutor` and report listener.
 
-## Phase 2: HRM vertical slices
+## Phase 2: further vertical slices
 
 Migrate one complete domain at a time:
 
