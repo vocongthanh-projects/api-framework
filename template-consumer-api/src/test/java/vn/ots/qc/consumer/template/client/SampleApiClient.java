@@ -1,4 +1,4 @@
-package com.example.consumer.client;
+package vn.ots.qc.consumer.template.client;
 
 import vn.ots.qc.api.core.auth.Actor;
 import vn.ots.qc.api.core.http.ApiClient;

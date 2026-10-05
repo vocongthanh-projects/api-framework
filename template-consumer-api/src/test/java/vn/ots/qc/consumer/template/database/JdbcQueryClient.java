@@ -1,4 +1,4 @@
-package com.example.consumer.database;
+package vn.ots.qc.consumer.template.database;
 
 import java.sql.DriverManager;
 import java.sql.SQLException;

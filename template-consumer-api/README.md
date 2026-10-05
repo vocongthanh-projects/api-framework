@@ -38,7 +38,7 @@ Trước đó, đặt API_G_CONNECT_GIT_URL bằng Clone URL lấy từ GitLab h
 cp -R /Users/thanhvc/Workspace/api-framework/template-consumer-api/. .
 ~~~
 
-4. Đổi groupId và artifactId trong pom.xml theo namespace của sản phẩm. Không đổi groupId/artifactId/version của các dependency vn.ots.qc.
+4. Đổi groupId và artifactId trong pom.xml theo namespace của sản phẩm, đồng thời đổi Java package `vn.ots.qc.consumer.template` sang namespace của dự án. Không đổi groupId/artifactId/version của các dependency framework `vn.ots.qc`.
 5. Kiểm tra remote và file trước khi commit:
 
 ~~~bash

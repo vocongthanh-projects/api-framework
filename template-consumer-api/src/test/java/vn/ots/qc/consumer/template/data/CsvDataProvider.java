@@ -1,4 +1,4 @@
-package com.example.consumer.data;
+package vn.ots.qc.consumer.template.data;
 
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVRecord;

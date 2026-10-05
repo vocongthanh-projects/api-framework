@@ -1,6 +1,6 @@
-package com.example.consumer.base;
+package vn.ots.qc.consumer.template.base;
 
-import com.example.consumer.client.SampleApiClient;
+import vn.ots.qc.consumer.template.client.SampleApiClient;
 import com.sun.net.httpserver.HttpServer;
 import vn.ots.qc.api.core.auth.CredentialManager;
 import vn.ots.qc.api.core.config.FrameworkConfig;

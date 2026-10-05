@@ -1,6 +1,6 @@
-package com.example.consumer.tests;
+package vn.ots.qc.consumer.template.tests;
 
-import com.example.consumer.base.BaseProjectApiTest;
+import vn.ots.qc.consumer.template.base.BaseProjectApiTest;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 import vn.ots.qc.api.core.auth.Actor;

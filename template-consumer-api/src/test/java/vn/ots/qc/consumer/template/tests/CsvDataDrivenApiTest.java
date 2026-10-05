@@ -1,7 +1,7 @@
-package com.example.consumer.tests;
+package vn.ots.qc.consumer.template.tests;
 
-import com.example.consumer.base.BaseProjectApiTest;
-import com.example.consumer.data.CsvDataProvider;
+import vn.ots.qc.consumer.template.base.BaseProjectApiTest;
+import vn.ots.qc.consumer.template.data.CsvDataProvider;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 import vn.ots.qc.api.core.auth.Actor;

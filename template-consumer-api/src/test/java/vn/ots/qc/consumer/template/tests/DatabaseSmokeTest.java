@@ -1,6 +1,6 @@
-package com.example.consumer.tests;
+package vn.ots.qc.consumer.template.tests;
 
-import com.example.consumer.database.JdbcQueryClient;
+import vn.ots.qc.consumer.template.database.JdbcQueryClient;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
