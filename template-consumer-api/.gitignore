@@ -1,0 +1,6 @@
+target/
+config-local.properties
+.idea/
+*.iml
+.DS_Store
+*.log

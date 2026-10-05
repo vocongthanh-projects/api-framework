@@ -14,6 +14,8 @@ Endpoint domain và assertion nghiệp vụ nằm ở repo consumer như `api_hr
 | `framework-testng` | Lifecycle TestNG, wiring runtime dùng chung, và trace JSON redact tạm thời |
 | `starter-example` | Consumer tối giản với 1 fake API local |
 
+`template-consumer-api/` là starter project độc lập để copy thành repository consumer mới. Khác với `starter-example` (contract example chạy trong Maven reactor), template có POM riêng và không kế thừa parent của framework.
+
 ## Build
 
 ```bash

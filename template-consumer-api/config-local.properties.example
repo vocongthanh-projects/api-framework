@@ -1,0 +1,3 @@
+# Copy to config-local.properties for local overrides. This file is ignored by Git.
+api.base-url=https://replace-me-with-local-api-url.example
+# Keep credentials in a secret manager or environment variables; do not add them here.
