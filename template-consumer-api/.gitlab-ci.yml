@@ -21,7 +21,7 @@ api-consumer-tests:
       EOF
   script:
     - test -n "$API_FRAMEWORK_PROJECT_ID"
-    - API_FRAMEWORK_VERSION="${API_FRAMEWORK_VERSION:-1.0.0-SNAPSHOT}"
+    - API_FRAMEWORK_VERSION="${API_FRAMEWORK_VERSION:-1.0.1-SNAPSHOT}"
     - ./mvnw --batch-mode --no-transfer-progress -Dapi.framework.version="$API_FRAMEWORK_VERSION" -Dapi.framework.repository.url="$CI_API_V4_URL/projects/$API_FRAMEWORK_PROJECT_ID/packages/maven" clean verify
   artifacts:
     when: always

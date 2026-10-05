@@ -54,21 +54,21 @@ Thêm GitLab Package Registry và dependency framework vào `pom.xml` của dự
     <dependency>
         <groupId>vn.ots.qc</groupId>
         <artifactId>framework-testng</artifactId>
-        <version>1.0.0-SNAPSHOT</version>
+        <version>1.0.1-SNAPSHOT</version>
     </dependency>
 
     <!-- HTTP Transport with auto-retry, secret redaction, auto-401 recovery -->
     <dependency>
         <groupId>vn.ots.qc</groupId>
         <artifactId>framework-http-restassured</artifactId>
-        <version>1.0.0-SNAPSHOT</version>
+        <version>1.0.1-SNAPSHOT</version>
     </dependency>
 
     <!-- Fixtures: eventual-consistency polling, LIFO cleanup, unique data -->
     <dependency>
         <groupId>vn.ots.qc</groupId>
         <artifactId>framework-fixtures</artifactId>
-        <version>1.0.0-SNAPSHOT</version>
+        <version>1.0.1-SNAPSHOT</version>
     </dependency>
 </dependencies>
 ```
@@ -95,7 +95,7 @@ Nếu pull package từ GitLab cần auth, cấu hình Personal Access Token tro
 ```
 
 ### Chiến lược versioning & release
-- **Continuous Integration (branch `develop`):** Tự động publish `1.0.0-SNAPSHOT` để kiểm thử và phát triển local.
+- **Continuous Integration (branch `develop`):** Tự động publish `1.0.1-SNAPSHOT` để kiểm thử và phát triển local.
 - **Production Releases (Git Tag):** Push 1 Git tag (vd. `git tag v1.0.0 && git push origin v1.0.0`) sẽ kích hoạt pipeline bump version reactor lên `1.0.0` trước khi deploy lên Package Registry.
 - **Khuyến nghị cho consumer:** Pin đúng 1 version release cụ thể (vd. `1.0.0` hoặc `1.1.0`) thay vì `SNAPSHOT` ở repo consumer production (`api_hrm`, `api-map`) để đảm bảo test chạy bất biến, đáng tin cậy.
 

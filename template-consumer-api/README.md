@@ -12,7 +12,7 @@ The smoke test uses an in-process JDK HTTP server. It does not contact a real se
 
 ## Start from the template
 
-Copy this directory into a new repository, rename the Maven coordinates in `pom.xml`, then choose a released framework version for `api.framework.version`. Use a released version for shared/production CI; `1.0.0-SNAPSHOT` is intended for framework development.
+Copy this directory into a new repository, rename the Maven coordinates in `pom.xml`, then choose a released framework version for `api.framework.version`. Use a released version for shared/production CI; `1.0.1-SNAPSHOT` is intended for framework development.
 
 ### Local framework development
 
