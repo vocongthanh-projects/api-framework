@@ -1,71 +1,181 @@
-# API Consumer Test Template
+# API Consumer Template
 
-Starter project for a new API test repository using `api-framework`. This directory is independent of the framework reactor: its POM has no framework `<parent>` and depends only on published artifacts (or artifacts installed locally for development).
+Starter project độc lập để tạo repository kiểm thử API mới bằng Java 17, Maven và TestNG. Template dùng các artifact từ API Framework; không chứa source framework hay nghiệp vụ của một sản phẩm cụ thể. Có ví dụ test data CSV và một kiểm tra JDBC tùy chọn; phần DB mặc định không chạy.
 
-## What belongs here
+## Phân chia trách nhiệm
 
-- The template provides Maven/TestNG wiring, a project base test, a domain-client example, configuration placeholders, and an offline smoke contract.
-- The API framework provides HTTP execution, redaction, retries, test lifecycle, traces, and resource cleanup.
-- A product repository owns real endpoints, DTOs, assertions, credentials, and business test data.
+- **API Framework**: HTTP transport, config có kiểu, credential hooks, retry, redaction, TestNG lifecycle, trace và cleanup.
+- **Consumer template**: Maven/CI skeleton, BaseProjectApiTest mẫu, SampleApiClient và smoke test offline.
+- **Consumer sản phẩm**: base URL, auth, DTO, endpoint/client, dữ liệu/SQL theo sản phẩm, assertions và kịch bản nghiệp vụ.
 
-The smoke test uses an in-process JDK HTTP server. It does not contact a real service and contains no product URL or credentials.
+Smoke test của template tự mở JDK HTTP server trong process. Nó không cần Internet hoặc API sản phẩm và không chứng minh endpoint thật hoạt động.
 
-## Start from the template
+## Trước khi bắt đầu
 
-Copy this directory into a new repository, rename the Maven coordinates in `pom.xml`, then choose a released framework version for `api.framework.version`. Use a released version for shared/production CI; `1.0.1-SNAPSHOT` is intended for framework development.
+1. Trong GitLab project Framework API (ID 1263), xác nhận pipeline trên develop xanh.
+2. Mở Deploy → Package Registry và xác nhận các artifact cần dùng có version 1.0.1-SNAPSHOT.
+3. Nếu package chưa xuất hiện, chờ/điều tra deploy job trước khi tạo consumer dựa vào version đó.
 
-### Local framework development
+Push source framework thành công không đồng nghĩa package đã được publish.
 
-Install the framework artifacts into the local Maven repository first:
+## Tạo repository sản phẩm từ template
 
-```bash
-cd ../api-framework
-./mvnw clean install
-cd template-consumer-api
-./mvnw clean verify
-```
+Ví dụ tạo api-g-connect:
 
-The template contains its own Maven Wrapper, so the copied project does not depend on a sibling framework checkout after the artifacts are installed.
+1. Tạo repository GitLab rỗng cho api-g-connect. Nên tạo repo không có README/license để tránh phải xử lý hai lịch sử ban đầu.
+2. Clone repo sản phẩm:
 
-### GitLab Maven Package Registry
+~~~bash
+git clone "$API_G_CONNECT_GIT_URL"
+cd api-g-connect
+~~~
 
-The API framework publishes its Maven artifacts to the GitLab Package Registry. Configure the framework project ID and credentials in the consumer CI variables. The sample CI job uses `CI_API_V4_URL`, `API_FRAMEWORK_PROJECT_ID`, and GitLab's `CI_JOB_TOKEN`; the framework project must allow the consumer project to access its job token.
+Trước đó, đặt API_G_CONNECT_GIT_URL bằng Clone URL lấy từ GitLab hoặc thay biến bằng URL thật. Không paste nguyên chuỗi placeholder.
 
-For local registry access, add a Maven server with ID `api-framework-registry` to `~/.m2/settings.xml`, and activate the URL property when building. Configure a read-package token using the authentication method supported by your GitLab instance:
+3. Copy toàn bộ template vào root của repo mới. Dấu chấm cuối giúp copy cả file ẩn như .gitignore và .gitlab-ci.yml:
 
-```xml
+~~~bash
+cp -R /Users/thanhvc/Workspace/api-framework/template-consumer-api/. .
+~~~
+
+4. Đổi groupId và artifactId trong pom.xml theo namespace của sản phẩm. Không đổi groupId/artifactId/version của các dependency vn.ots.qc.
+5. Kiểm tra remote và file trước khi commit:
+
+~~~bash
+git remote -v
+git status
+git diff --check
+~~~
+
+6. Commit source khởi tạo và push lên branch chính mà GitLab repo sử dụng:
+
+~~~bash
+git add .
+git diff --cached
+git commit -m "chore: initialize API consumer from template"
+git push -u origin main
+~~~
+
+Nếu project dùng develop làm branch chính, thay main bằng develop. Kiểm tra git remote -v trước push để chắc remote là api-g-connect chứ không phải Framework API.
+
+## Cài Framework từ GitLab Maven Package Registry
+
+### GitLab CI
+
+Template pipeline đọc các biến sau:
+
+- API_FRAMEWORK_PROJECT_ID: ID project Framework API; giá trị hiện tại là 1263.
+- API_FRAMEWORK_VERSION: optional; mặc định 1.0.1-SNAPSHOT.
+- CI_JOB_TOKEN: GitLab tự cấp cho job, không tạo hoặc commit token này.
+
+Trong consumer project, mở Settings → CI/CD → Variables và tạo API_FRAMEWORK_PROJECT_ID=1263. Sau đó tại Framework API mở Settings → CI/CD → Job token permissions/allowlist và cho phép job token từ project api-g-connect đọc package.
+
+Template .gitlab-ci.yml tạo Maven settings dùng server ID api-framework-registry, username gitlab-ci-token và CI_JOB_TOKEN. Không cần đưa Personal Access Token vào CI variables. Nếu job lỗi 401/403, kiểm tra allowlist và quyền package trước khi đổi POM.
+
+### Local Registry access
+
+Maven settings local phải có server ID api-framework-registry, khớp repository id trong pom.xml. Credentials lưu trong ~/.m2/settings.xml, không trong repo:
+
+~~~xml
 <settings>
   <servers>
     <server>
       <id>api-framework-registry</id>
       <username>YOUR_GITLAB_USERNAME_OR_TOKEN_USER</username>
-      <password>USE_A_LOCAL_SECRET_OR_ENVIRONMENT_VARIABLE</password>
+      <password>YOUR_READ_PACKAGE_TOKEN</password>
     </server>
   </servers>
 </settings>
-```
+~~~
 
-```bash
-./mvnw -Dapi.framework.version=1.0.0 \
-  -Dapi.framework.repository.url=https://<GITLAB_DOMAIN>/api/v4/projects/<PROJECT_ID>/packages/maven \
+Dùng token có quyền đọc package theo policy của GitLab tổ chức. Để tải qua project Registry, truyền URL khi chạy Maven:
+
+~~~bash
+./mvnw -U \
+  -Dapi.framework.version=1.0.1-SNAPSHOT \
+  -Dapi.framework.repository.url="https://<GITLAB_HOST>/api/v4/projects/1263/packages/maven" \
   clean verify
-```
+~~~
 
-Never commit personal tokens or real credentials. Keep secrets in Maven user settings, a secret manager, or masked/protected CI variables.
+Thay host theo GitLab instance. Self-managed GitLab hiện có thể chỉ cung cấp HTTP trong một số môi trường; HTTP không mã hóa token trên đường truyền. Ưu tiên HTTPS hoặc dùng cách cài local bên dưới trong môi trường phù hợp. Không đặt token vào command line hoặc URL.
 
-## Configuration and implementation
+### Local framework development
 
-`src/test/resources/config.properties` and `config-local.properties.example` are placeholders for the consumer's own configuration loader. The sample smoke test intentionally uses a local in-process endpoint instead. The framework itself accepts typed configuration through `FrameworkConfig`; it does not automatically interpret arbitrary application property keys.
+Nếu đang làm việc trên checkout framework cùng máy, có thể cài toàn bộ reactor vào Maven local repository:
 
-Copy `config-local.properties.example` to `config-local.properties` for local-only values. That file is gitignored. Do not put passwords or tokens in committed configuration. In CI, use protected and masked variables and construct `CredentialManager` from those values.
-
-Adapt `BaseProjectApiTest.createRuntime()` to build `FrameworkConfig`, a `CredentialManager`, and `RestAssuredApiClient`. Keep each product's endpoints in consumer-owned domain clients like `SampleApiClient`; do not call RestAssured directly. The sample registers its created item with `resources().register(...)`; `BaseApiTest` runs that cleanup after the test method even when the assertion fails.
-
-## Commands
-
-```bash
+~~~bash
+cd /Users/thanhvc/Workspace/api-framework
+./mvnw clean install
+cd /PATH/TO/api-g-connect
 ./mvnw clean verify
-./mvnw -Dtest=SmokeApiTest test
-```
+~~~
 
-Surefire XML is written to `target/surefire-reports/`; redacted exchange traces are written to `target/api-traces/`.
+Cách này không kiểm chứng quyền đọc Package Registry. Dùng phần Registry access nếu cần xác nhận dự án mới tải được artifact đã publish.
+
+## Cấu hình sản phẩm và viết test
+
+Các file config.properties và config-local.properties.example chỉ là ví dụ placeholder. Framework không tự đọc các key tùy ý như api.base-url. Consumer cần đọc config từ environment/config provider rồi dựng FrameworkConfig và CredentialManager trong BaseProjectApiTest.createRuntime().
+
+Trong api-g-connect:
+
+- Thay BaseProjectApiTest mẫu đang dựng HTTP server in-process bằng runtime dự án thật.
+- Dùng RestAssuredApiClient làm transport qua framework.
+- Viết domain client riêng, ví dụ AuthClient hoặc UserClient; client chứa endpoint và request mapping của sản phẩm.
+- Viết DTO và test scenario/assertions thuộc sản phẩm.
+- Lưu secret ở protected/masked CI variables hoặc secret manager. File config-local.properties được gitignore; không commit username/password/token.
+- Nếu test tạo resource, đăng ký cleanup qua resources() để BaseApiTest dọn kể cả khi test fail.
+
+### Test data từ CSV
+
+`src/test/resources/testdata/sample-items.csv` minh họa dữ liệu dạng bảng và `CsvDataProvider` chuyển mỗi dòng thành một lần chạy TestNG. `CsvDataDrivenApiTest` dùng các dòng đó khi gọi sample API. Thay CSV, cột và DataProvider theo trường hợp của sản phẩm. CSV phù hợp với các giá trị phẳng; payload lồng nhau hoặc nhiều cấu trúc thường dễ quản lý hơn dưới dạng JSON/DTO. Không lưu password, token hay dữ liệu cá nhân thật trong test data đã commit.
+
+Chạy các smoke test mặc định (không cần database):
+
+~~~bash
+./mvnw clean verify
+~~~
+
+### SQL/JDBC tùy chọn
+
+Database testing không thuộc framework core vì schema, SQL và JDBC driver gắn với sản phẩm. Template chỉ đưa ví dụ JDBC tối giản phía consumer: `JdbcQueryClient` dùng prepared statement và mở/đóng một connection cho mỗi query; `DatabaseSmokeTest` chạy câu read-only trong `src/test/resources/sql/database-smoke.sql`. Bài này bị loại khỏi build mặc định. Ví dụ này hợp với vài truy vấn kiểm chứng; nếu suite tạo nhiều truy vấn hoặc chạy song song, consumer nên cấp một `DataSource`/connection pool riêng. JDBC khuyến nghị `DataSource` khi phù hợp với kiến trúc ứng dụng.
+
+Để bật cho một consumer có quyền dùng test database:
+
+1. Thêm JDBC driver đúng loại DB vào `pom.xml` của consumer theo phiên bản được tổ chức phê duyệt. Template không chọn driver thay dự án.
+2. Cấu hình `DB_JDBC_URL`, `DB_USERNAME`, `DB_PASSWORD` trong environment local; trên CI dùng protected/masked variables hoặc secret manager.
+3. Chạy riêng nhóm database:
+
+~~~bash
+DB_JDBC_URL='jdbc:<vendor>://<host>:<port>/<database>' \
+DB_USERNAME='<test-user>' DB_PASSWORD='<secret>' \
+./mvnw -Pdatabase-tests test
+~~~
+
+Profile chỉ chọn TestNG group `database`; nó không tạo database, cấp credentials hay tự thêm vendor JDBC driver. Thay `SELECT 1` bằng truy vấn read-only của sản phẩm để xác nhận dữ liệu sau API call. Giới hạn DB account vào test environment và quyền tối thiểu cần thiết; không chạy SQL thay đổi/xóa dữ liệu trên môi trường dùng chung nếu chưa có thiết kế setup/cleanup rõ ràng. SQL files và DB assertions theo schema luôn nằm trong consumer.
+
+Trong GitLab CI, có thể thêm job riêng chạy `./mvnw -Pdatabase-tests test` với protected variables và runner có network access tới test DB. Không bật profile này cho pipeline mặc định nếu project không cấu hình database.
+
+Trong repository API Framework, xem docs/configuration.md, docs/architecture.md và docs/test-design.md để biết thêm chi tiết về cấu hình và thiết kế test.
+
+## Chạy và đọc kết quả
+
+Chạy smoke test offline của template:
+
+~~~bash
+./mvnw clean verify
+~~~
+
+Chạy riêng smoke:
+
+~~~bash
+./mvnw -Dtest=SmokeApiTest test
+~~~
+
+Khi thêm test sản phẩm thật, các test đó có thể cần endpoint và credential riêng. Surefire XML nằm ở target/surefire-reports/; trace redacted ở target/api-traces/.
+
+## Dependency/version và phát hành
+
+- Template hiện khai báo framework version 1.0.1-SNAPSHOT.
+- develop của API Framework publish snapshot; tag vX.Y.Z phát hành version ổn định X.Y.Z.
+- Với pipeline sản phẩm cần tái lập ổn định, chọn version release đã xuất hiện trong Package Registry thay vì SNAPSHOT.
+- Khi cập nhật snapshot, chạy Maven với -U để yêu cầu kiểm tra metadata mới; không dùng -U như cách sửa lỗi quyền truy cập.

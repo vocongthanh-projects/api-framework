@@ -33,7 +33,10 @@ validate:
 test:
   stage: test
   script:
-    - ./mvnw $MAVEN_CLI_OPTS verify
+    - ./mvnw $MAVEN_CLI_OPTS install
+    - cd template-consumer-api
+    - ./mvnw $MAVEN_CLI_OPTS clean verify
+    - cd "$CI_PROJECT_DIR"
   artifacts:
     when: always
     expire_in: 7 days
