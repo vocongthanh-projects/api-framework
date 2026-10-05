@@ -22,6 +22,18 @@
     <dependencies>
         <dependency>
             <groupId>vn.ots.qc</groupId>
+            <artifactId>framework-core</artifactId>
+            <version>${api.framework.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>vn.ots.qc</groupId>
+            <artifactId>framework-fixtures</artifactId>
+            <version>${api.framework.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>vn.ots.qc</groupId>
             <artifactId>framework-testng</artifactId>
             <version>${api.framework.version}</version>
             <scope>test</scope>

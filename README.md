@@ -56,6 +56,18 @@ Nếu dự án đã có Maven structure riêng, có thể khai báo project-scop
 <dependencies>
     <dependency>
         <groupId>vn.ots.qc</groupId>
+        <artifactId>framework-core</artifactId>
+        <version>1.0.1-SNAPSHOT</version>
+        <scope>test</scope>
+    </dependency>
+    <dependency>
+        <groupId>vn.ots.qc</groupId>
+        <artifactId>framework-fixtures</artifactId>
+        <version>1.0.1-SNAPSHOT</version>
+        <scope>test</scope>
+    </dependency>
+    <dependency>
+        <groupId>vn.ots.qc</groupId>
         <artifactId>framework-testng</artifactId>
         <version>1.0.1-SNAPSHOT</version>
         <scope>test</scope>
@@ -63,12 +75,6 @@ Nếu dự án đã có Maven structure riêng, có thể khai báo project-scop
     <dependency>
         <groupId>vn.ots.qc</groupId>
         <artifactId>framework-http-restassured</artifactId>
-        <version>1.0.1-SNAPSHOT</version>
-        <scope>test</scope>
-    </dependency>
-    <dependency>
-        <groupId>vn.ots.qc</groupId>
-        <artifactId>framework-fixtures</artifactId>
         <version>1.0.1-SNAPSHOT</version>
         <scope>test</scope>
     </dependency>
