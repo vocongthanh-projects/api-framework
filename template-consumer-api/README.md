@@ -10,6 +10,20 @@ Starter project độc lập để tạo repository kiểm thử API mới bằn
 
 Smoke test của template tự mở JDK HTTP server trong process. Nó không cần Internet hoặc API sản phẩm và không chứng minh endpoint thật hoạt động.
 
+## Utilities kiểm thử dùng chung
+
+Các helper không gắn với sản phẩm đã nằm trong dependency `framework-fixtures`; không cần tạo thư mục `utils` rồi chép lại framework code vào consumer:
+
+~~~java
+String email = UniqueData.email("qa", "example.test");
+String state = Eventually.within(Duration.ofSeconds(10))
+        .pollEvery(Duration.ofMillis(250))
+        .until(client::getState, "READY"::equals, "job completion");
+resources().register("record", id, () -> client.delete(id));
+~~~
+
+`UniqueData` tạo dữ liệu định danh không trùng, `Eventually` poll theo điều kiện với timeout, và `ResourceLedger` thu dọn tài nguyên theo thứ tự ngược lúc tạo. Import các lớp từ `vn.ots.qc.api.fixture`. Helper riêng như mapper CSV theo schema, query SQL, payload builder hay auth của sản phẩm nên đặt trong package chuyên trách của consumer (`data`, `database`, `auth`, `client`), thay vì một `Utils`/`Common` class lớn.
+
 ## Trước khi bắt đầu
 
 1. Trong GitLab project Framework API (ID 1263), xác nhận pipeline trên develop xanh.
@@ -112,13 +126,47 @@ cd /PATH/TO/api-g-connect
 
 Cách này không kiểm chứng quyền đọc Package Registry. Dùng phần Registry access nếu cần xác nhận dự án mới tải được artifact đã publish.
 
-## Cấu hình sản phẩm và viết test
+## Cấu hình sản phẩm, auth và viết test
 
-Các file config.properties và config-local.properties.example chỉ là ví dụ placeholder. Framework không tự đọc các key tùy ý như api.base-url. Consumer cần đọc config từ environment/config provider rồi dựng FrameworkConfig và CredentialManager trong BaseProjectApiTest.createRuntime().
+Template cung cấp `ConsumerConfig` để đọc theo thứ tự: system properties, environment variables, `config-local.properties`, rồi `config.properties`. Tên biến môi trường tương ứng với key dạng chữ hoa, ví dụ `auth.login-url` → `AUTH_LOGIN_URL`; environment/system property có ưu tiên cao nhất. Mẫu smoke test vẫn chạy server in-process và dùng service profile `none` nên không cần endpoint hay secret.
+
+### Auth/session có sẵn trong consumer
+
+`ConfiguredAuthProvider` là adapter mẫu nối cấu hình dự án với `AuthProvider` của framework. Hỗ trợ bốn kiểu phổ biến:
+
+| `auth.mode` | Cách hoạt động | Giá trị cần cấu hình |
+|---|---|---|
+| `none` | Không gửi thông tin xác thực; mặc định của template | Không cần |
+| `bearer-token` | Gửi `Authorization: Bearer ...` | `AUTH_TOKEN` |
+| `cookie` | Gửi cookie session đã có | `AUTH_COOKIE_NAME`, `AUTH_COOKIE_VALUE` |
+| `json-bearer-login` | POST JSON username/password, đọc token từ JSON response | `AUTH_LOGIN_URL`, `AUTH_USERNAME`, `AUTH_PASSWORD`; tùy chỉnh username/password field, token JSON Pointer và expiry JSON Pointer |
+| `json-cookie-login` | POST JSON username/password, lấy cookie từ `Set-Cookie` response | `AUTH_LOGIN_URL`, `AUTH_USERNAME`, `AUTH_PASSWORD`, `AUTH_COOKIE_NAME`; tùy chỉnh tên field đăng nhập nếu cần |
+
+Đặt `auth.profile=api` trong config. Base template gọi `ConsumerRuntimeFactory.createTemplateRuntime(...)`: service `sample` dùng server in-process như trước; khi `api.base-url` đã được thay placeholder, factory tự đăng ký thêm service `api` với auth mode/profile tương ứng. Smoke test offline vẫn gọi `sample`; test sản phẩm gọi service `api`, nên auth phổ biến chỉ cần thay cấu hình và viết endpoint test. Factory `createConfiguredService(environment, serviceName, traceSink)` cũng có sẵn nếu dự án muốn chỉ dựng service thật. Framework cache kết quả trong bộ nhớ theo profile/actor, dùng lại giữa các request và xóa cache khi runtime đóng. Khi nhận 401 framework có thể invalidate credential rồi gọi provider thêm một lần theo retry policy. Token/cookie không được ghi xuống file hay repo.
+
+Ví dụ bật bearer login trong `config-local.properties` (file này được gitignore), còn thông tin bí mật truyền qua environment:
+
+~~~properties
+auth.mode=json-bearer-login
+auth.profile=api
+auth.login-url=https://replace-me-with-api-url.example/auth/login
+auth.username-field=username
+auth.password-field=password
+auth.token-json-pointer=/access_token
+auth.expires-in-json-pointer=/expires_in
+~~~
+
+~~~bash
+export AUTH_USERNAME='<test-user>'
+export AUTH_PASSWORD='<secret>'
+./mvnw test
+~~~
+
+Giá trị JSON Pointer mặc định `/access_token` và `/expires_in` khớp phản hồi OAuth-style thông dụng; thay chúng theo response thật. Login mẫu gửi JSON POST và hỗ trợ một cặp username/password. OAuth client credentials, refresh-token flow riêng, CSRF, MFA, redirect login, custom signing hoặc session cookie cần protocol đặc thù thì triển khai `AuthProvider` riêng trong consumer, thay `ConfiguredAuthProvider` hoặc đăng ký thêm profile. Session cookie chỉ tự được đọc ở lần đăng nhập; framework gửi lại cookie đã cache nhưng hiện không duy trì cookie jar từ mọi response.
 
 Trong api-g-connect:
 
-- Thay BaseProjectApiTest mẫu đang dựng HTTP server in-process bằng runtime dự án thật.
+- Thay BaseProjectApiTest mẫu đang dựng HTTP server in-process bằng runtime dự án thật; giữ `ConsumerRuntimeFactory` để auth profile được nối vào `CredentialManager`.
 - Dùng RestAssuredApiClient làm transport qua framework.
 - Viết domain client riêng, ví dụ AuthClient hoặc UserClient; client chứa endpoint và request mapping của sản phẩm.
 - Viết DTO và test scenario/assertions thuộc sản phẩm.

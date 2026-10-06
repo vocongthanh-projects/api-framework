@@ -17,6 +17,7 @@
         <module>framework-http-restassured</module>
         <module>framework-fixtures</module>
         <module>framework-testng</module>
+        <module>framework-nosql</module>
         <module>starter-example</module>
     </modules>
 
@@ -32,6 +33,7 @@
         <surefire.version>3.5.6</surefire.version>
         <source.version>3.3.1</source.version>
         <javadoc.version>3.11.2</javadoc.version>
+        <mongodb.version>5.3.1</mongodb.version>
     </properties>
 
     <dependencyManagement>
@@ -80,6 +82,21 @@
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-simple</artifactId>
                 <version>${slf4j.version}</version>
+            </dependency>
+                    <dependency>
+                <groupId>vn.ots.qc</groupId>
+                <artifactId>framework-nosql</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.mongodb</groupId>
+                <artifactId>mongodb-driver-sync</artifactId>
+                <version>${mongodb.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.mongodb</groupId>
+                <artifactId>bson</artifactId>
+                <version>${mongodb.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

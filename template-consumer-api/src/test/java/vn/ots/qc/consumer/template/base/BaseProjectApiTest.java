@@ -2,16 +2,13 @@ package vn.ots.qc.consumer.template.base;
 
 import vn.ots.qc.consumer.template.client.SampleApiClient;
 import com.sun.net.httpserver.HttpServer;
-import vn.ots.qc.api.core.auth.CredentialManager;
-import vn.ots.qc.api.core.config.FrameworkConfig;
 import vn.ots.qc.api.core.config.ServiceConfig;
-import vn.ots.qc.api.restassured.RestAssuredApiClient;
 import vn.ots.qc.api.testng.ApiTestRuntime;
 import vn.ots.qc.api.testng.BaseApiTest;
 import vn.ots.qc.api.testng.CurrentTestTraceSink;
+import vn.ots.qc.consumer.template.auth.ConsumerRuntimeFactory;
 
 import java.net.InetSocketAddress;
-import java.util.Map;
 
 /** Base wiring for consumer tests. The sample server keeps the template smoke test offline. */
 public abstract class BaseProjectApiTest extends BaseApiTest {
@@ -45,14 +42,11 @@ public abstract class BaseProjectApiTest extends BaseApiTest {
 
     @Override
     protected ApiTestRuntime createRuntime() {
-        FrameworkConfig config = FrameworkConfig.builder()
-                .environment("template")
-                .service(ServiceConfig.builder("sample", "http://127.0.0.1:" + sampleServer.getAddress().getPort()).build())
-                .build();
-        CredentialManager credentials = new CredentialManager(Map.of());
-        RestAssuredApiClient client = new RestAssuredApiClient(config, credentials, new CurrentTestTraceSink());
-        sampleClient = new SampleApiClient(client);
-        return new ApiTestRuntime(config, credentials, client);
+        ApiTestRuntime runtime = ConsumerRuntimeFactory.createTemplateRuntime("template",
+                ServiceConfig.builder("sample", "http://127.0.0.1:" + sampleServer.getAddress().getPort()).build(),
+                new CurrentTestTraceSink());
+        sampleClient = new SampleApiClient(runtime.client());
+        return runtime;
     }
 
     protected final SampleApiClient sampleClient() {

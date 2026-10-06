@@ -15,6 +15,26 @@ Framework Java 17 dùng chung cho API test automation. Framework cung cấp tran
 
 Template không kế thừa Maven parent của framework. Dự án consumer khai báo các framework modules dưới dạng dependency.
 
+### Utilities dùng chung và utilities theo sản phẩm
+
+Framework đã có các tiện ích kiểm thử dùng chung trong `framework-fixtures`:
+
+- `UniqueData.value(...)` / `UniqueData.email(...)` tạo dữ liệu định danh duy nhất để tránh va chạm giữa test chạy song song.
+- `Eventually.within(...).pollEvery(...).until(...)` chờ điều kiện cuối cùng đúng thay cho `Thread.sleep` cố định.
+- `ResourceLedger` đăng ký cleanup và chạy theo thứ tự LIFO; `BaseApiTest` cấp ledger theo từng test.
+
+Ví dụ:
+
+~~~java
+String email = UniqueData.email("qa", "example.test");
+String status = Eventually.within(Duration.ofSeconds(10))
+        .pollEvery(Duration.ofMillis(250))
+        .until(client::getStatus, "READY"::equals, "job completion");
+resources().register("user", userId, () -> client.deleteUser(userId));
+~~~
+
+Không có module `utils` tổng hợp có chủ ý: tiện ích chỉ nên vào framework khi có hợp đồng ổn định, không gắn với schema/API cụ thể và được nhiều consumer dùng. CSV parsing, DTO mapping, SQL/JDBC, JSON fixtures theo sản phẩm, auth đặc thù và builders nghiệp vụ thuộc consumer; template API có ví dụ CSV/JDBC để nhóm dự án tùy biến.
+
 ## Build và kiểm thử framework
 
 Yêu cầu JDK 17. Tại root framework:
@@ -117,19 +137,13 @@ GitLab self-managed trong môi trường hiện tại đang dùng HTTP ở một
 
 ## Cấu hình và viết test consumer
 
-Template có BaseProjectApiTest, SampleApiClient và SmokeApiTest. Smoke test tự khởi tạo JDK HTTP server cục bộ, nên chỉ xác nhận runner/framework wiring; nó không gọi API sản phẩm.
+`template-consumer-api` hiện có `ConsumerConfig`, `ConfiguredAuthProvider`, `ConsumerRuntimeFactory`, `BaseProjectApiTest`, `SampleApiClient` và smoke test offline. Config loader của **template** đọc system properties, environment variables, `config-local.properties`, rồi `src/test/resources/config.properties`; các key như `auth.mode` map thành `AUTH_MODE`. Framework core không tự đọc cấu hình sản phẩm.
 
-Các file config.properties và config-local.properties.example chỉ là placeholder. Framework không tự đọc tùy ý các key application properties. Consumer cần map environment/config provider của mình sang FrameworkConfig, CredentialManager và RestAssuredApiClient trong BaseProjectApiTest.createRuntime(). Giữ endpoint trong domain client của consumer; không gọi RestAssured trực tiếp trong test.
+Auth adapter của template hỗ trợ token Bearer/cookie tĩnh và login JSON cơ bản. Consumer có giao thức khác như GConnect OAuth cần `AuthProvider` riêng trong consumer. Token/session cache trong memory theo profile/actor trong vòng đời runtime; không phải session bền vững trên đĩa. Framework API hiện không tự duy trì cookie jar từ mọi response. Xem [auth/session trong README template](template-consumer-api/README.md#authsession-có-sẵn-trong-consumer).
 
-Luồng triển khai đề xuất:
+Domain client như UserClient bọc `ApiClient` và giữ method/path/serialization của sản phẩm; test scenario gọi client rồi assert response. Resource test tạo ra đăng ký qua `resources()` để framework cleanup kể cả khi assertion fail. Không gọi RestAssured trực tiếp trong test và không commit URL có credential, password, token hoặc response nhạy cảm.
 
-- BaseProjectApiTest dựng một ApiTestRuntime cho mỗi test lifecycle và khởi tạo auth từ CI variables/secret manager.
-- Domain client như UserClient bọc ApiClient, giữ method/path/serialization của sản phẩm.
-- Test scenario gọi domain client và assert response.
-- Resource được tạo trong test đăng ký vào resources() để BaseApiTest cleanup sau test, kể cả khi assertion fail.
-- Không ghi URL có credential, password, token hoặc response nhạy cảm vào log/config đã commit.
-
-Template hiện có ví dụ CSV/TestNG DataProvider và một ví dụ JDBC tùy chọn, mặc định không chạy. CSV, SQL, JDBC driver và assertions theo schema thuộc consumer; framework core không kết nối database. Xem mục test data CSV và SQL/JDBC trong [README template](template-consumer-api/README.md#test-data-từ-csv).
+Template có ví dụ CSV/TestNG DataProvider và JDBC tùy chọn, mặc định không chạy. CSV, SQL, JDBC driver và assertions theo schema thuộc consumer; framework core không kết nối database. Xem mục [CSV và SQL/JDBC](template-consumer-api/README.md#test-data-từ-csv).
 
 Xem [configuration](docs/configuration.md), [architecture](docs/architecture.md), [test design](docs/test-design.md), [CI/CD](docs/ci-cd.md), [migration](docs/migration.md) và [quality audit](docs/quality-audit.md).
 
