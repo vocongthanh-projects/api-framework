@@ -95,10 +95,11 @@ Quy tắc bắt buộc cho cả Kỹ sư kiểm thử và Trợ lý AI khi phát
 ## 7. CẤU TRÚC PACKAGE CONSUMER CHUẨN
 ```
 src/test/java/<package_root>/
-├── auth/           # OAuth, AuthProvider, Token/Key manager, Runtime factory
+├── auth/           # OAuth, AuthProvider, Token/Key manager, Encryption utils
 ├── client/         # Domain API Clients (<Feature>Client) gọi API qua ApiClient
 ├── config/         # Cấu hình chuẩn (Config / ConsumerConfig)
 ├── data/           # CsvDataProvider nạp dữ liệu từ CSV
+├── runtime/        # Runtime Factories (ConsumerRuntimeFactory: API & NoSQL)
 └── tests/          # Các Test Suite (<Feature>ApiTest) - KHÔNG để file nháp/rác
 src/test/resources/
 ├── config.properties
