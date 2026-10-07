@@ -46,6 +46,12 @@
             <scope>test</scope>
         </dependency>
         <dependency>
+            <groupId>vn.ots.qc</groupId>
+            <artifactId>framework-sql</artifactId>
+            <version>${api.framework.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
             <version>${jackson.version}</version>

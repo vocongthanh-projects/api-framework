@@ -21,6 +21,8 @@ public final class NoSqlConfig {
         this.defaultDatabase = builder.defaultDatabase != null ? builder.defaultDatabase.trim() : "";
         this.connectTimeoutMs = builder.connectTimeoutMs;
         this.serverSelectionTimeoutMs = builder.serverSelectionTimeoutMs;
+        if (connectTimeoutMs <= 0) throw new IllegalArgumentException("connectTimeoutMs must be > 0");
+        if (serverSelectionTimeoutMs <= 0) throw new IllegalArgumentException("serverSelectionTimeoutMs must be > 0");
     }
 
     public String uri() { return uri; }

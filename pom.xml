@@ -18,6 +18,7 @@
         <module>framework-fixtures</module>
         <module>framework-testng</module>
         <module>framework-nosql</module>
+        <module>framework-sql</module>
         <module>starter-example</module>
     </modules>
 
@@ -83,9 +84,14 @@
                 <artifactId>slf4j-simple</artifactId>
                 <version>${slf4j.version}</version>
             </dependency>
-                    <dependency>
+            <dependency>
                 <groupId>vn.ots.qc</groupId>
                 <artifactId>framework-nosql</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>vn.ots.qc</groupId>
+                <artifactId>framework-sql</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>

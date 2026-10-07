@@ -10,6 +10,8 @@ Framework Java 17 dùng chung cho API test automation. Framework cung cấp tran
 | framework-http-restassured | RestAssured transport dùng chung |
 | framework-fixtures | Cleanup LIFO, eventual-consistency polling và test data unique |
 | framework-testng | TestNG lifecycle, runtime wiring và trace |
+| framework-sql | JDBC client trung lập vendor cho SQL assertions |
+| framework-nosql | MongoDB client và query loader cho NoSQL assertions |
 | starter-example | Contract example trong reactor; không phải template cho sản phẩm mới |
 | template-consumer-api/ | Starter project độc lập để tạo repository consumer mới |
 
@@ -33,7 +35,7 @@ String status = Eventually.within(Duration.ofSeconds(10))
 resources().register("user", userId, () -> client.deleteUser(userId));
 ~~~
 
-Không có module `utils` tổng hợp có chủ ý: tiện ích chỉ nên vào framework khi có hợp đồng ổn định, không gắn với schema/API cụ thể và được nhiều consumer dùng. CSV parsing, DTO mapping, SQL/JDBC, JSON fixtures theo sản phẩm, auth đặc thù và builders nghiệp vụ thuộc consumer; template API có ví dụ CSV/JDBC để nhóm dự án tùy biến.
+Không có module `utils` tổng hợp có chủ ý: tiện ích chỉ nên vào framework khi có hợp đồng ổn định, không gắn với schema/API cụ thể và được nhiều consumer dùng. CSV parsing, DTO mapping, câu SQL, JDBC driver, JSON fixtures theo sản phẩm, auth đặc thù và builders nghiệp vụ thuộc consumer; module SQL chỉ cung cấp API kết nối/chạy query chung.
 
 ## Build và kiểm thử framework
 
@@ -143,7 +145,7 @@ Auth adapter của template hỗ trợ token Bearer/cookie tĩnh và login JSON 
 
 Domain client như UserClient bọc `ApiClient` và giữ method/path/serialization của sản phẩm; test scenario gọi client rồi assert response. Resource test tạo ra đăng ký qua `resources()` để framework cleanup kể cả khi assertion fail. Không gọi RestAssured trực tiếp trong test và không commit URL có credential, password, token hoặc response nhạy cảm.
 
-Template có ví dụ CSV/TestNG DataProvider và JDBC tùy chọn, mặc định không chạy. CSV, SQL, JDBC driver và assertions theo schema thuộc consumer; framework core không kết nối database. Xem mục [CSV và SQL/JDBC](template-consumer-api/README.md#test-data-từ-csv).
+Template có ví dụ CSV/TestNG DataProvider và SQL/JDBC tùy chọn, mặc định không chạy. `framework-sql` cung cấp JDBC client dùng chung; SQL, JDBC driver và assertions theo schema thuộc consumer. NoSQL module hiện triển khai MongoDB với find/count/command; JSON query placeholder được escape theo ngữ cảnh và tham số thiếu báo lỗi. Xem mục [CSV và SQL/JDBC](template-consumer-api/README.md#test-data-từ-csv).
 
 Xem [configuration](docs/configuration.md), [architecture](docs/architecture.md), [test design](docs/test-design.md), [CI/CD](docs/ci-cd.md), [migration](docs/migration.md) và [quality audit](docs/quality-audit.md).
 

@@ -40,20 +40,58 @@ public final class NoSqlQueryLoader {
      */
     public static String loadQuery(String resourcePath, Map<String, ?> parameters) {
         String template = loadRaw(resourcePath);
-        if (parameters == null || parameters.isEmpty()) {
-            return template;
-        }
-
+        Map<String, ?> values = parameters == null ? Map.of() : parameters;
         Matcher matcher = PARAM_PATTERN.matcher(template);
         StringBuilder sb = new StringBuilder();
         while (matcher.find()) {
             String key = matcher.group(2).trim();
-            Object value = parameters.get(key);
-            String replacement = value != null ? Matcher.quoteReplacement(String.valueOf(value)) : "";
+            if (!values.containsKey(key)) {
+                throw new IllegalArgumentException("Missing NoSQL query parameter: " + key);
+            }
+            Object value = values.get(key);
+            String replacement;
+            if (insideJsonString(template, matcher.start())) {
+                replacement = escapeJsonString(value == null ? "null" : String.valueOf(value));
+            } else if (value == null || value instanceof Number || value instanceof Boolean) {
+                replacement = value == null ? "null" : String.valueOf(value);
+            } else {
+                throw new IllegalArgumentException("Unquoted NoSQL placeholders only support numbers, booleans, or null: " + key);
+            }
+            replacement = Matcher.quoteReplacement(replacement);
             matcher.appendReplacement(sb, replacement);
         }
         matcher.appendTail(sb);
         return sb.toString();
+    }
+
+    private static boolean insideJsonString(String json, int index) {
+        boolean quoted = false;
+        boolean escaped = false;
+        for (int i = 0; i < index; i++) {
+            char c = json.charAt(i);
+            if (escaped) escaped = false;
+            else if (c == '\\' && quoted) escaped = true;
+            else if (c == '"') quoted = !quoted;
+        }
+        return quoted;
+    }
+
+    private static String escapeJsonString(String value) {
+        StringBuilder escaped = new StringBuilder();
+        for (int i = 0; i < value.length(); i++) {
+            char c = value.charAt(i);
+            switch (c) {
+                case '"' -> escaped.append("\\\"");
+                case '\\' -> escaped.append("\\\\");
+                case '\b' -> escaped.append("\\b");
+                case '\f' -> escaped.append("\\f");
+                case '\n' -> escaped.append("\\n");
+                case '\r' -> escaped.append("\\r");
+                case '\t' -> escaped.append("\\t");
+                default -> { if (c < 0x20) escaped.append(String.format("\\u%04x", (int) c)); else escaped.append(c); }
+            }
+        }
+        return escaped.toString();
     }
 
     /**

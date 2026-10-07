@@ -1,6 +1,6 @@
 package vn.ots.qc.consumer.template.tests;
 
-import vn.ots.qc.consumer.template.database.JdbcQueryClient;
+import vn.ots.qc.api.sql.SqlClient;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
@@ -16,6 +16,8 @@ public final class DatabaseSmokeTest {
             if (input == null) throw new IllegalStateException("Missing /sql/database-smoke.sql");
             sql = new String(input.readAllBytes(), StandardCharsets.UTF_8).trim();
         }
-        Assert.assertEquals(JdbcQueryClient.fromEnvironment().queryForLong(sql), 1L);
+        try (SqlClient client = SqlClient.fromEnvironment()) {
+            Assert.assertEquals(client.queryForLong(sql), 1L);
+        }
     }
 }

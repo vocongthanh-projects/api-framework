@@ -185,7 +185,7 @@ Chạy các smoke test mặc định (không cần database):
 
 ### SQL/JDBC tùy chọn
 
-Database testing không thuộc framework core vì schema, SQL và JDBC driver gắn với sản phẩm. Template chỉ đưa ví dụ JDBC tối giản phía consumer: `JdbcQueryClient` dùng prepared statement và mở/đóng một connection cho mỗi query; `DatabaseSmokeTest` chạy câu read-only trong `src/test/resources/sql/database-smoke.sql`. Bài này bị loại khỏi build mặc định. Ví dụ này hợp với vài truy vấn kiểm chứng; nếu suite tạo nhiều truy vấn hoặc chạy song song, consumer nên cấp một `DataSource`/connection pool riêng. JDBC khuyến nghị `DataSource` khi phù hợp với kiến trúc ứng dụng.
+Database testing không thuộc framework core vì schema, SQL và JDBC driver gắn với sản phẩm. Module `framework-sql` cung cấp `SqlClient` trung lập vendor, dùng prepared statement và mở/đóng một connection cho mỗi thao tác; consumer thêm driver tương ứng. `DatabaseSmokeTest` chạy câu read-only trong `src/test/resources/sql/database-smoke.sql` và bị loại khỏi build mặc định. Client phù hợp với vài truy vấn kiểm chứng; suite có tải lớn hoặc chạy song song nên consumer cân nhắc cung cấp `DataSource`/connection pool riêng.
 
 Để bật cho một consumer có quyền dùng test database:
 
