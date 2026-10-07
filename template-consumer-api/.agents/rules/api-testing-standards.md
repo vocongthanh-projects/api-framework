@@ -28,6 +28,12 @@ Quy tắc bắt buộc cho cả Kỹ sư kiểm thử và Trợ lý AI khi phát
     - Assert nghiêm ngặt theo đúng Business & Status Code quy chuẩn (ví dụ: tạo mới thành công `201`/`200`, lỗi validate phải `400 Bad Request`, không có quyền `401`/`403`, không tìm thấy `404`).
     - Khi Backend xử lý sai, bài test **PHẢI BỊ FAIL**. Giữ nguyên failure và báo cáo BUG thực tế cho đội ngũ phát triển sửa lỗi.
 
+### 2.1 Kiểm tra response chặt chẽ
+- Với endpoint được kỳ vọng trả JSON, body rỗng, JSON lỗi, thiếu field bắt buộc hoặc sai kiểu dữ liệu phải làm test fail; không đặt assertion trong `if (!body.isBlank())` để bỏ qua trường hợp không có body.
+- Không coi field `data` bị thiếu hoặc không phải array là kết quả rỗng. Xác nhận response envelope, `data` và kiểu dữ liệu trước khi kiểm tra số lượng phần tử.
+- Với tìm kiếm, kiểm tra cả tổng số lượng và nội dung item khớp điều kiện theo contract. Với điều kiện không có kết quả, xác nhận response hợp lệ và count bằng 0.
+- Không viết nhiều expected value thay thế nhau (ví dụ business code `0` hoặc `200`) nếu contract không quy định cả hai.
+
 ---
 
 ## 3. LUÔN KIỂM TRA TRẠNG THÁI TRƯỚC VÀ SAU ACTION (BEFORE - ACTION - AFTER VERIFICATION)
@@ -48,6 +54,13 @@ Quy tắc bắt buộc cho cả Kỹ sư kiểm thử và Trợ lý AI khi phát
        - *Delete*: Kiểm tra bản ghi đã bị xóa sạch (Hard Delete: `count == 0` trong DB) hoặc chuyển cờ `is_deleted = true` (nếu nghiệp vụ quy định Soft Delete).
 - **Mục tiêu**: Phát hiện triệt để các lỗi "ngầm" (API trả thành công nhưng Database không lưu, lưu thiếu trường, hoặc không xóa thật sự).
 
+### 3.1 Cleanup phải đáng tin cậy và không xóa nhầm
+- Đăng ký cleanup ngay sau khi lấy được ID resource. Chỉ cleanup ID do chính test run tạo và track; không quét/xóa theo prefix chung trên môi trường dùng chung.
+- Không xóa ID khỏi danh sách theo dõi trong `finally`. Chỉ bỏ ID sau khi API xác nhận xóa và trạng thái sau xóa đã được kiểm chứng.
+- Không nuốt exception, không chỉ ghi log rồi pass, và không xóa danh sách ID còn lỗi. Cleanup thất bại phải làm test/class fail; class-level cleanup có thể retry các ID còn track.
+- Tránh gọi DELETE lần hai cho resource đã được xóa và xác minh thành công; cleanup hook cần kiểm tra trạng thái tracking trước khi gọi.
+- Nếu assertion hỏng trước khi lấy được ID sau thao tác tạo, thiết kế test nên lấy ID từ create response hoặc có cơ chế cleanup có giới hạn theo run ID riêng, không dùng prefix dùng chung.
+
 ---
 
 ## 4. TÁCH BIỆT TUYỆT ĐỐI CODE LOGIC VÀ TEST DATA (KHÔNG HARDCODE TRONG CODE)
@@ -64,6 +77,9 @@ Quy tắc bắt buộc cho cả Kỹ sư kiểm thử và Trợ lý AI khi phát
       - `src/test/resources/nosql/<query>.json` cho NoSQL/MongoDB.
       - `src/test/resources/sql/<query>.sql` cho SQL/Relational DB.
     - Sử dụng placeholder `${param}` hoặc `{{param}}` để nạp tham số động vào dữ liệu/truy vấn.
+- Không dùng fallback chứa dữ liệu kịch bản trong Java (`asText("...")`, magic number, default tên/value). Field bắt buộc thiếu trong resource phải báo lỗi rõ ràng để fixture lỗi không biến thành một kịch bản khác.
+- Chỉ giữ trong Java các hằng số thuộc contract/schema (HTTP path, tên field, enum protocol); URL, portal/tenant/environment ID, credential và mọi expected/test value phải đến từ config hoặc fixture phù hợp.
+- Tách dữ liệu test khỏi config: expected status, keyword, payload value và boundary case nằm trong fixture; endpoint, tenant code, timeout môi trường và credential nằm trong config.
 
 ---
 
@@ -84,9 +100,8 @@ Quy tắc bắt buộc cho cả Kỹ sư kiểm thử và Trợ lý AI khi phát
 
 ## 6. TRUY VẤN DATABASE: SỬ DỤNG MODULE CHUẨN TỪ FRAMEWORK
 - **Sử dụng module chuẩn của Framework**:
-  - Không tự ý kéo DB driver ngoài (MongoDB driver, JDBC vendor driver) vào consumer để tránh lệch phiên bản.
-  - Dùng `vn.ots.qc:framework-nosql` (`NoSqlClient`, `NoSqlQueryLoader`, `NoSqlConfig`).
-  - Dùng module JDBC chuẩn từ `api-framework`.
+  - Dùng `vn.ots.qc:framework-nosql` (`NoSqlClient`, `NoSqlQueryLoader`, `NoSqlConfig`); không khai báo MongoDB driver trực tiếp trong consumer nếu đã được kéo bắc cầu từ module này.
+  - Dùng `framework-sql` cho JDBC API. Vì module trung lập vendor không đóng gói JDBC driver, consumer khai báo driver đúng loại database theo version được tổ chức phê duyệt và quản lý version tập trung.
 - **Database chỉ dùng để READ/VERIFY trong kiểm thử**:
   - Thao tác xóa hoặc dọn dẹp dữ liệu phải đi qua API của ứng dụng để mô phỏng đúng luồng người dùng thực tế. Không xóa tắt trực tiếp bằng lệnh DB DELETE.
 
