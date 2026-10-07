@@ -67,7 +67,22 @@ Quy tắc bắt buộc cho cả Kỹ sư kiểm thử và Trợ lý AI khi phát
 
 ---
 
-## 5. TRUY VẤN DATABASE: SỬ DỤNG MODULE CHUẨN TỪ FRAMEWORK
+## 5. QUY CHUẨN NGÔN NGỮ: CODE TIẾNG ANH TOÀN BỘ — COMMENT TIẾNG VIỆT
+- **Toàn bộ Code thực thi viết bằng Tiếng Anh (100% English Code)**:
+  - Tên class, interface, method, biến, hằng số, enum, model, builder, payload key.
+  - Tên test method (theo chuẩn `createsCredentialSuccessfully`, `verifiesHardDeleteInMongoDb`, v.v.).
+  - Các thông điệp Assertion và log runtime (`Assert.assertEquals(actual, expected, "Credential document must exist in MongoDB")`).
+  - Tên file tài nguyên (`.csv`, `.json`, `.sql`), tên branch, git commit messages.
+  - Mục đích: Đảm bảo tính chuẩn hóa quốc tế, chuyên nghiệp và tương thích hoàn toàn với các công cụ CI/CD, linter, report parser.
+- **Toàn bộ Comment & Chú thích viết bằng Tiếng Việt (Vietnamese Comments)**:
+  - JavaDoc mô tả mục đích của Class, Method, Test Suite.
+  - Comment từng bước thực hiện (Step 1: Tạo credential qua API; Step 2: Xác thực trạng thái ban đầu tại MongoDB...).
+  - Giải thích lý do nghiệp vụ, logic phức tạp, cảnh báo kỹ thuật hoặc edge case.
+  - Mục đích: Giúp đội ngũ QC/QA và Developers người Việt nắm bắt luồng kiểm thử ngay lập tức mà không gặp rào cản ngôn ngữ.
+
+---
+
+## 6. TRUY VẤN DATABASE: SỬ DỤNG MODULE CHUẨN TỪ FRAMEWORK
 - **Sử dụng module chuẩn của Framework**:
   - Không tự ý kéo DB driver ngoài (MongoDB driver, JDBC vendor driver) vào consumer để tránh lệch phiên bản.
   - Dùng `vn.ots.qc:framework-nosql` (`NoSqlClient`, `NoSqlQueryLoader`, `NoSqlConfig`).
@@ -77,14 +92,13 @@ Quy tắc bắt buộc cho cả Kỹ sư kiểm thử và Trợ lý AI khi phát
 
 ---
 
-## 6. CẤU TRÚC PACKAGE CONSUMER CHUẨN
+## 7. CẤU TRÚC PACKAGE CONSUMER CHUẨN
 ```
 src/test/java/<package_root>/
 ├── auth/           # OAuth, AuthProvider, Token/Key manager, Runtime factory
 ├── client/         # Domain API Clients (<Feature>Client) gọi API qua ApiClient
 ├── config/         # Cấu hình chuẩn (Config / ConsumerConfig)
 ├── data/           # CsvDataProvider nạp dữ liệu từ CSV
-├── database/       # Adapter truy vấn bổ sung (nếu có)
 └── tests/          # Các Test Suite (<Feature>ApiTest) - KHÔNG để file nháp/rác
 src/test/resources/
 ├── config.properties
@@ -95,7 +109,7 @@ src/test/resources/
 
 ---
 
-## 7. BẢO MẬT & THỰC THI AN TOÀN
+## 8. BẢO MẬT & THỰC THI AN TOÀN
 - Không hardcode credentials, secrets, tokens, domain/IP thật trong Git.
 - Cấu hình nhạy cảm nằm ở `config-local.properties` (gitignored) hoặc biến môi trường.
 - AI không tự ý thực thi các lệnh tấn công mạng/quét trực tiếp ngoài phạm vi cho phép.
