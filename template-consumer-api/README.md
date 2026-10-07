@@ -46,11 +46,22 @@ cd api-g-connect
 
 Trước đó, đặt API_G_CONNECT_GIT_URL bằng Clone URL lấy từ GitLab hoặc thay biến bằng URL thật. Không paste nguyên chuỗi placeholder.
 
-3. Copy toàn bộ template vào root của repo mới. Dấu chấm cuối giúp copy cả file ẩn như .gitignore và .gitlab-ci.yml:
+3. Scaffold vào repository mới đang rỗng. Script tự copy cả file ẩn như `.agents/`, `.cursor/`, `.github/`, `.gitignore` và `.gitlab-ci.yml`, đồng thời bỏ thư mục build `target/`:
 
 ~~~bash
-cp -R /Users/thanhvc/Workspace/api-framework/template-consumer-api/. .
+cd /path/to/api-framework
+./scripts/create-consumer-project.sh /path/to/api-g-connect
 ~~~
+
+Hoặc copy thủ công sau khi xóa build output trong template. Dấu chấm cuối source giúp lệnh lấy cả file ẩn:
+
+~~~bash
+cd /path/to/api-framework/template-consumer-api
+./mvnw clean
+cp -R /path/to/api-framework/template-consumer-api/. /path/to/api-g-connect/
+~~~
+
+Template giữ `.agents/AGENTS.md` và `.agents/rules/` làm bộ quy chuẩn gốc. `AGENTS.md` ở root cùng `.cursor/rules/api-testing.mdc` và `.github/copilot-instructions.md` hướng các trợ lý tương ứng đọc bộ quy chuẩn đó; Antigravity tự nạp rules trong `.agents/`. Mở đầu phiên làm việc với công cụ khác, yêu cầu trợ lý đọc `.agents/AGENTS.md` nếu phiên bản hoặc cấu hình hiện tại không tự nạp file.
 
 4. Đổi groupId và artifactId trong pom.xml theo namespace của sản phẩm, đồng thời đổi Java package `vn.ots.qc.consumer.template` sang namespace của dự án. Không đổi groupId/artifactId/version của các dependency framework `vn.ots.qc`.
 5. Kiểm tra remote và file trước khi commit:

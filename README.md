@@ -55,7 +55,13 @@ Tóm tắt:
 
 1. Chờ pipeline của Framework API trên develop xanh và xác nhận Package Registry đã có version cần dùng. Source push thành công chưa có nghĩa package đã publish.
 2. Tạo repository GitLab rỗng cho sản phẩm, clone về máy.
-3. Copy nội dung trong template-consumer-api vào repository mới.
+3. Scaffold project bằng script (script từ chối destination không rỗng, copy cả file/thư mục ẩn và bỏ Maven `target/`):
+
+~~~bash
+./scripts/create-consumer-project.sh /path/to/new-api-test
+~~~
+
+Template đã chứa `.agents/`, `AGENTS.md`, `.cursor/` và `.github/copilot-instructions.md`; các file này được giữ lại trong project mới.
 4. Đổi Maven coordinates của consumer; không đổi framework GAV nếu không có lý do.
 5. Cấu hình quyền đọc Maven package trong local Maven settings hoặc GitLab CI Job Token.
 6. Viết client, config và test nghiệp vụ trong consumer repository; giữ framework modules ở vai trò dependency.
@@ -146,6 +152,10 @@ Auth adapter của template hỗ trợ token Bearer/cookie tĩnh và login JSON 
 Domain client như UserClient bọc `ApiClient` và giữ method/path/serialization của sản phẩm; test scenario gọi client rồi assert response. Resource test tạo ra đăng ký qua `resources()` để framework cleanup kể cả khi assertion fail. Không gọi RestAssured trực tiếp trong test và không commit URL có credential, password, token hoặc response nhạy cảm.
 
 Template có ví dụ CSV/TestNG DataProvider và SQL/JDBC tùy chọn, mặc định không chạy. `framework-sql` cung cấp JDBC client dùng chung; SQL, JDBC driver và assertions theo schema thuộc consumer. NoSQL module hiện triển khai MongoDB với find/count/command; JSON query placeholder được escape theo ngữ cảnh và tham số thiếu báo lỗi. Xem mục [CSV và SQL/JDBC](template-consumer-api/README.md#test-data-từ-csv).
+
+### Quy chuẩn cho trợ lý AI
+
+Template đóng gói `.agents/AGENTS.md` và các rule trong `.agents/rules/` làm nguồn chuẩn. `AGENTS.md` ở root hướng Cursor/Antigravity/Codex tới bộ quy chuẩn; `.cursor/rules/` và `.github/copilot-instructions.md` là điểm vào theo convention của từng công cụ, yêu cầu đọc cùng nguồn `.agents/`. Khi scaffold bằng script hoặc lệnh copy `template-consumer-api/.`, các file ẩn này được giữ nguyên.
 
 Xem [configuration](docs/configuration.md), [architecture](docs/architecture.md), [test design](docs/test-design.md), [CI/CD](docs/ci-cd.md), [migration](docs/migration.md) và [quality audit](docs/quality-audit.md).
 
