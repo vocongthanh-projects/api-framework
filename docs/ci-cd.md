@@ -9,10 +9,23 @@ validate -> test -> deploy
 ```
 
 - **validate**: Compiles and packages all reactor modules with sources and javadocs attached (`-DskipTests package`).
-- **test**: Executes full test suite (`./mvnw verify`), ensuring 100% pass rate and publishing surefire JUnit XML reports + redacted API traces.
-- **deploy**: Deploys `api-framework-parent` and the 4 core libraries (`framework-core`, `framework-http-restassured`, `framework-fixtures`, `framework-testng`) along with their `-sources.jar` and `-javadoc.jar` to a package registry. `starter-example` is explicitly skipped.
+- **test**: Executes the framework test suite and installs the reactor artifacts locally, then runs `template-consumer-api/` against those artifacts with `clean verify`. This checks the consumer starter before publication without requiring a GitLab package round trip. Publishes Surefire JUnit XML reports + redacted API traces.
+- **deploy**: Deploys `api-framework-parent` and the 4 core libraries (`framework-core`, `framework-http-restassured`, `framework-fixtures`, `framework-testng`) along with their `-sources.jar` and `-javadoc.jar` to the GitLab Package Registry. `starter-example` is explicitly skipped.
 
-## 2. Consumer Test Suite Blueprint (Target Architecture for Large Consumer Projects)
+## 2. Consumer Template Pipeline
+
+The independent starter project in `template-consumer-api/` has its own `.gitlab-ci.yml`; it is not part of the framework reactor pipeline. The job:
+
+1. Creates a temporary Maven `settings.xml` using GitLab's built-in `CI_JOB_TOKEN`.
+2. Reads `API_FRAMEWORK_PROJECT_ID` from the consumer project's CI/CD variables.
+3. Resolves the framework from the project Maven endpoint and runs `clean verify`.
+4. Publishes Surefire XML and redacted API traces as job artifacts.
+
+Set `API_FRAMEWORK_PROJECT_ID` to the Framework API GitLab project ID for your instance. Add the consumer project to the framework project's CI/CD job-token allowlist so its token can read the private package. `API_FRAMEWORK_VERSION` is optional and defaults to `1.0.2-SNAPSHOT`; select a published release version for a stable consumer pipeline.
+
+The template smoke test uses an in-process JDK HTTP server. It checks Maven dependency resolution and the framework wiring without contacting a real service. Consumer API tests that need a product environment must receive their URL and credentials from protected/masked CI variables or a secret manager.
+
+## 3. Consumer Test Suite Blueprint (Target Architecture for consumer projects)
 
 For consumer repositories containing large enterprise regression suites (hundreds or thousands of API test scenarios), the recommended target pipeline is:
 
@@ -27,7 +40,10 @@ The pipeline must use the repository already checked out by the CI runner. Never
 embedded in YAML. Test failures must produce a non-zero build result; reporting and notification jobs may use
 `when: always` but must not overwrite that result.
 
-Start parallel execution at class level after migration. Keep shared-tenant and destructive suites serial.
+Start with `-Dapi.test.parallel=classes` after migrating suites and isolating their data. The template caps this at
+four workers unless `-Dapi.test.thread-count` is supplied. Method-level parallelism can be selected with
+`-Dapi.test.parallel=methods` when every invocation owns its data and has no shared mutable test state. Keep
+shared-tenant and destructive suites serial.
 Shard regression tests by historical duration rather than class count, and distinguish runner retry from test retry.
 
 Publish these artifacts:

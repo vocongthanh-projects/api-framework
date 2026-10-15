@@ -1,0 +1,16 @@
+# Copy to config-local.properties for local overrides. This file is ignored by Git.
+api.base-url=https://replace-me-with-local-api-url.example
+# Choose one mode: none, bearer-token, cookie, json-bearer-login, json-cookie-login.
+# auth.mode=json-bearer-login
+auth.profile=api
+# Used by the JSON login modes. Set endpoint and field/path names for the target API.
+# auth.login-url=https://replace-me-with-api-url.example/auth/login
+# auth.username-field=username
+# auth.password-field=password
+# auth.token-json-pointer=/access_token
+# auth.expires-in-json-pointer=/expires_in
+# auth.cookie-name=SESSION
+# Keep credentials in a secret manager or environment variables; do not add them here.
+# Supported secret environment variables: AUTH_TOKEN, AUTH_COOKIE_VALUE, AUTH_USERNAME, AUTH_PASSWORD.
+# Optional DB_JDBC_URL, DB_USERNAME, and DB_PASSWORD belong in local environment variables,
+# not in this file. Add the database-specific JDBC driver to pom.xml when needed.

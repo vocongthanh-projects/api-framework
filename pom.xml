@@ -6,7 +6,7 @@
 
     <groupId>vn.ots.qc</groupId>
     <artifactId>api-framework-parent</artifactId>
-    <version>1.0.0-SNAPSHOT</version>
+    <version>1.0.2-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>API Framework</name>
@@ -17,6 +17,8 @@
         <module>framework-http-restassured</module>
         <module>framework-fixtures</module>
         <module>framework-testng</module>
+        <module>framework-nosql</module>
+        <module>framework-sql</module>
         <module>starter-example</module>
     </modules>
 
@@ -32,6 +34,9 @@
         <surefire.version>3.5.6</surefire.version>
         <source.version>3.3.1</source.version>
         <javadoc.version>3.11.2</javadoc.version>
+        <mongodb.version>5.3.1</mongodb.version>
+        <spotless.version>3.10.4</spotless.version>
+        <google-java-format.version>1.28.0</google-java-format.version>
     </properties>
 
     <dependencyManagement>
@@ -81,6 +86,26 @@
                 <artifactId>slf4j-simple</artifactId>
                 <version>${slf4j.version}</version>
             </dependency>
+            <dependency>
+                <groupId>vn.ots.qc</groupId>
+                <artifactId>framework-nosql</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>vn.ots.qc</groupId>
+                <artifactId>framework-sql</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.mongodb</groupId>
+                <artifactId>mongodb-driver-sync</artifactId>
+                <version>${mongodb.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.mongodb</groupId>
+                <artifactId>bson</artifactId>
+                <version>${mongodb.version}</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
@@ -108,6 +133,28 @@
             </plugins>
         </pluginManagement>
         <plugins>
+            <plugin>
+                <groupId>com.diffplug.spotless</groupId>
+                <artifactId>spotless-maven-plugin</artifactId>
+                <version>${spotless.version}</version>
+                <configuration>
+                    <java>
+                        <googleJavaFormat>
+                            <version>${google-java-format.version}</version>
+                            <style>GOOGLE</style>
+                        </googleJavaFormat>
+                    </java>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>check-java-format</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>

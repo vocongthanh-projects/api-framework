@@ -1,0 +1,34 @@
+image: maven:3.9-eclipse-temurin-17
+
+stages:
+  - verify
+
+api-consumer-tests:
+  stage: verify
+  before_script:
+    - mkdir -p "$HOME/.m2"
+    - |
+      cat > "$HOME/.m2/settings.xml" <<EOF
+      <settings xmlns="http://maven.apache.org/SETTINGS/1.2.0">
+        <servers>
+          <server>
+            <id>api-framework-registry</id>
+            <username>gitlab-ci-token</username>
+            <password>${CI_JOB_TOKEN}</password>
+          </server>
+        </servers>
+      </settings>
+      EOF
+  script:
+    - test -n "$API_FRAMEWORK_PROJECT_ID"
+    - API_FRAMEWORK_VERSION="${API_FRAMEWORK_VERSION:-1.0.2-SNAPSHOT}"
+    - ./mvnw --batch-mode --no-transfer-progress -Dapi.framework.version="$API_FRAMEWORK_VERSION" -Dapi.framework.repository.url="$CI_API_V4_URL/projects/$API_FRAMEWORK_PROJECT_ID/packages/maven" -Dapi.test.parallel=classes clean verify
+  artifacts:
+    when: always
+    reports:
+      junit:
+        - "target/surefire-reports/TEST-*.xml"
+    paths:
+      - target/surefire-reports/
+      - target/api-traces/
+    expire_in: 7 days

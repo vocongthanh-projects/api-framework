@@ -1,8 +1,8 @@
 # Configuration
 
 Version 1 deliberately has no classpath configuration DSL. Consumers build immutable typed configuration from
-environment variables or their existing configuration provider. This keeps the framework aligned with common
-consumer-project deployment models.
+environment variables or their existing configuration provider. This keeps the framework aligned with the current
+consumer projects deployment model.
 
 ```java
 FrameworkConfig config = FrameworkConfig.builder()

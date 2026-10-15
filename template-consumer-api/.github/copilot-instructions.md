@@ -1,0 +1,1 @@
+Before changing code, read `AGENTS.md` and the canonical project rules in `.agents/AGENTS.md` and `.agents/rules/`. Treat `.agents/` as the source of truth; do not duplicate or weaken those requirements.

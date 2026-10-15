@@ -1,200 +1,182 @@
 # API Framework
 
-Engine Java 17 có thể tái sử dụng cho API test automation. Tập trung hóa cấu hình, authentication,
-thực thi HTTP, retry an toàn, redact secret, context theo từng test, dọn fixture, và trace request.
-Endpoint domain và assertion nghiệp vụ nằm ở repo consumer riêng của bạn.
+Framework Java 17 dùng chung cho API test automation. Framework cung cấp transport, config có kiểu, authentication hooks, retry an toàn, redaction, test lifecycle, cleanup và trace. Endpoint, DTO, credential, test data và nghiệp vụ thuộc về repository consumer.
 
-## Module
+## Modules và ví dụ
 
 | Module | Trách nhiệm |
 |---|---|
-| `framework-core` | Config có kiểu, API request/response, actor, credential, retry policy, redaction, và test context |
-| `framework-http-restassured` | Triển khai RestAssured duy nhất và điểm thoát ra mạng |
-| `framework-fixtures` | Dọn resource kiểu LIFO, polling eventual-consistency, và test data unique |
-| `framework-testng` | Lifecycle TestNG, wiring runtime dùng chung, và trace JSON redact tạm thời |
-| `starter-example` | Consumer tối giản với 1 fake API local |
+| framework-core | Config, request/response, actor, credential, retry, redaction và test context |
+| framework-http-restassured | RestAssured transport dùng chung |
+| framework-fixtures | Cleanup LIFO, eventual-consistency polling và test data unique |
+| framework-testng | TestNG lifecycle, runtime wiring và trace |
+| framework-sql | JDBC client trung lập vendor cho SQL assertions |
+| framework-nosql | MongoDB client và query loader cho NoSQL assertions |
+| starter-example | Contract example trong reactor; không phải template cho sản phẩm mới |
+| template-consumer-api/ | Starter project độc lập để tạo repository consumer mới |
 
-## Build
+Template không kế thừa Maven parent của framework. Dự án consumer khai báo các framework modules dưới dạng dependency.
 
-```bash
+### Utilities dùng chung và utilities theo sản phẩm
+
+Framework đã có các tiện ích kiểm thử dùng chung trong `framework-fixtures`:
+
+- `UniqueData.value(...)` / `UniqueData.email(...)` tạo dữ liệu định danh duy nhất để tránh va chạm giữa test chạy song song.
+- `Eventually.within(...).pollEvery(...).until(...)` chờ điều kiện cuối cùng đúng thay cho `Thread.sleep` cố định.
+- `ResourceLedger` đăng ký cleanup và chạy theo thứ tự LIFO; `BaseApiTest` cấp ledger theo từng test.
+
+Template chạy tuần tự mặc định. Có thể bật TestNG class parallelism giới hạn bốn worker bằng
+`-Dapi.test.parallel=classes`; chỉ bật sau khi các test đã cô lập dữ liệu. `BaseApiTest` giữ context và cleanup
+ledger theo thread, còn trace có ID riêng cho mỗi invocation. Xem [hướng dẫn template](template-consumer-api/README.md)
+để biết cách bật parallel và giới hạn worker.
+
+Ví dụ:
+
+~~~java
+String email = UniqueData.email("qa", "example.test");
+String status = Eventually.within(Duration.ofSeconds(10))
+        .pollEvery(Duration.ofMillis(250))
+        .until(client::getStatus, "READY"::equals, "job completion");
+resources().register("user", userId, () -> client.deleteUser(userId));
+~~~
+
+Không có module `utils` tổng hợp có chủ ý: tiện ích chỉ nên vào framework khi có hợp đồng ổn định, không gắn với schema/API cụ thể và được nhiều consumer dùng. CSV parsing, DTO mapping, câu SQL, JDBC driver, JSON fixtures theo sản phẩm, auth đặc thù và builders nghiệp vụ thuộc consumer; module SQL chỉ cung cấp API kết nối/chạy query chung.
+
+## Build và kiểm thử framework
+
+Yêu cầu JDK 17. Tại root framework:
+
+~~~bash
 ./mvnw clean verify
-```
+~~~
 
-Build không gọi API bên ngoài nào. `starter-example` chạy trên 1 HTTP server in-process.
+Bộ verify chạy offline, không gọi API sản phẩm. Starter example dùng HTTP server in-process. Pipeline Framework API chạy validate, test rồi deploy.
 
-## File multipart và binary
+## Tạo dự án consumer mới
 
-```java
-ApiResponse response = api.execute(ApiRequest.post("storage", "/files")
-    .multipart(MultipartPart.text("purpose", "contract"))
-    .multipart(MultipartPart.file("file", Path.of("document.pdf"), "application/pdf"))
-    .build());
+**Khuyến nghị dùng template-consumer-api**, không copy starter-example. Các bước đầy đủ, lệnh clone/copy, config Maven, CI variables, smoke test và xử lý lỗi nằm trong [README của template](template-consumer-api/README.md).
 
-response.requireStatus(201).saveTo(Path.of("target/downloads/result.pdf"));
-```
+Tóm tắt:
 
-Trace multipart chỉ chứa tên phần, loại, và số byte. Tên file và nội dung file bị loại trừ. Response binary giữ nguyên byte-exact và được biểu diễn bằng metadata trong output trace.
+1. Chờ pipeline của Framework API trên develop xanh và xác nhận Package Registry đã có version cần dùng. Source push thành công chưa có nghĩa package đã publish.
+2. Tạo repository GitLab rỗng cho sản phẩm, clone về máy.
+3. Scaffold project bằng script (script từ chối destination không rỗng, copy cả file/thư mục ẩn và bỏ Maven `target/`):
 
-## Cách import vào dự án của bạn
+~~~bash
+./scripts/create-consumer-project.sh /path/to/new-api-test --package-root vn.ots.qc.api.newproject
+~~~
 
-Repo này không publish lên Maven Central hay registry công khai nào. Cách dùng nhanh nhất là
-clone và install vào local Maven repository của bạn:
+Template đã chứa `.agents/`, `AGENTS.md`, `.cursor/` và `.github/copilot-instructions.md`; các file này được giữ lại trong project mới.
+4. Đổi Maven coordinates của consumer; không đổi framework GAV nếu không có lý do.
+5. Cấu hình quyền đọc Maven package trong local Maven settings hoặc GitLab CI Job Token.
+6. Viết client, config và test nghiệp vụ trong consumer repository; giữ framework modules ở vai trò dependency.
+7. Chạy verify, commit/push đúng remote rồi xác nhận consumer pipeline.
 
-```bash
-git clone https://github.com/vocongthanh247/api-framework.git
-cd api-framework
-./mvnw clean install
-```
+Project ID của Framework Package Registry được truyền qua biến CI `API_FRAMEWORK_PROJECT_ID`, không hard-code vào POM. Lấy ID từ cấu hình GitLab của instance đang dùng. Đưa consumer project vào job-token allowlist của Framework API để CI consumer đọc được package.
 
-Sau đó thêm dependency vào `pom.xml` của dự án consumer:
+## Dùng Framework API trực tiếp
 
-```xml
+Nếu dự án đã có Maven structure riêng, có thể khai báo project-scoped Maven repository cùng các modules cần dùng:
+
+~~~xml
+<repositories>
+    <repository>
+        <id>api-framework-registry</id>
+        <url>https://your-gitlab-host/api/v4/projects/<PROJECT_ID>/packages/maven</url>
+    </repository>
+</repositories>
+
 <dependencies>
-    <!-- Core TestNG Lifecycle & Tracing -->
     <dependency>
         <groupId>vn.ots.qc</groupId>
-        <artifactId>framework-testng</artifactId>
-        <version>1.0.0-SNAPSHOT</version>
+        <artifactId>framework-core</artifactId>
+        <version>1.0.2-SNAPSHOT</version>
+        <scope>test</scope>
     </dependency>
-
-    <!-- HTTP Transport with auto-retry, secret redaction, auto-401 recovery -->
-    <dependency>
-        <groupId>vn.ots.qc</groupId>
-        <artifactId>framework-http-restassured</artifactId>
-        <version>1.0.0-SNAPSHOT</version>
-    </dependency>
-
-    <!-- Fixtures: eventual-consistency polling, LIFO cleanup, unique data -->
     <dependency>
         <groupId>vn.ots.qc</groupId>
         <artifactId>framework-fixtures</artifactId>
-        <version>1.0.0-SNAPSHOT</version>
+        <version>1.0.2-SNAPSHOT</version>
+        <scope>test</scope>
+    </dependency>
+    <dependency>
+        <groupId>vn.ots.qc</groupId>
+        <artifactId>framework-testng</artifactId>
+        <version>1.0.2-SNAPSHOT</version>
+        <scope>test</scope>
+    </dependency>
+    <dependency>
+        <groupId>vn.ots.qc</groupId>
+        <artifactId>framework-http-restassured</artifactId>
+        <version>1.0.2-SNAPSHOT</version>
+        <scope>test</scope>
     </dependency>
 </dependencies>
-```
+~~~
 
-### Chiến lược versioning & release
-- **Continuous Integration (branch `develop`):** Tự động publish `1.0.0-SNAPSHOT` để kiểm thử và phát triển local.
-- **Production Releases (Git Tag):** Push 1 Git tag (vd. `git tag v1.0.0 && git push origin v1.0.0`) sẽ kích hoạt pipeline bump version reactor lên `1.0.0` trước khi deploy.
-- **Khuyến nghị cho consumer:** Pin đúng 1 version release cụ thể (vd. `1.0.0` hoặc `1.1.0`) thay vì `SNAPSHOT` ở môi trường production để đảm bảo test chạy bất biến, đáng tin cậy.
+Dùng Registry qua Maven khi muốn kiểm chứng việc tải package độc lập. Local Maven server ID phải khớp repository ID là api-framework-registry. Lưu credentials ngoài source, trong ~/.m2/settings.xml hoặc secret manager; token chỉ nên có quyền đọc package:
 
-### Cấu trúc dự án consumer
+~~~xml
+<settings>
+  <servers>
+    <server>
+      <id>api-framework-registry</id>
+      <username>YOUR_GITLAB_USERNAME_OR_TOKEN_USER</username>
+      <password>YOUR_READ_PACKAGE_TOKEN</password>
+    </server>
+  </servers>
+</settings>
+~~~
 
-`starter-example` trong repo này là 1 ví dụ thật, build được — hãy copy theo layout đó:
+Có thể truyền repository URL khi build nếu consumer POM dùng profile của template:
 
-```text
-your-app-repo/
-├── src/main/java/com/yourcompany/
-│   └── clients/            # domain client bọc ApiClient, vd. UserClient
-├── src/test/java/com/yourcompany/
-│   ├── base/                 # BaseProjectApiTest (extends BaseApiTest)
-│   └── tests/                 # class test TestNG
-└── pom.xml
-```
+~~~bash
+./mvnw -U \
+  -Dapi.framework.version=1.0.2-SNAPSHOT \
+  -Dapi.framework.repository.url="https://<GITLAB_HOST>/api/v4/projects/<PROJECT_ID>/packages/maven" \
+  clean verify
+~~~
 
-## Hướng dẫn dùng cho consumer, từng bước
+Nếu đang phát triển Framework API local, thay vì đọc package Registry có thể cài reactor vào local Maven repository rồi build template:
 
-### 1. Định nghĩa Base Test của dự án
-Extend `BaseApiTest` và implement `createRuntime()`. Wire `FrameworkConfig`, `CredentialManager`, và domain client của bạn 1 lần duy nhất:
+~~~bash
+cd /path/to/api-framework
+./mvnw clean install
+cd template-consumer-api
+./mvnw clean verify
+~~~
 
-```java
-public abstract class BaseProjectApiTest extends BaseApiTest {
-    protected UserClient userClient;
+GitLab self-managed trong môi trường hiện tại đang dùng HTTP ở một số endpoint. HTTP không mã hóa credentials trên đường truyền. Ưu tiên HTTPS khi server hỗ trợ; CI dùng CI_JOB_TOKEN và không lưu token trong POM hoặc source.
 
-    @Override
-    protected ApiTestRuntime createRuntime() {
-        FrameworkConfig config = FrameworkConfig.builder()
-                .service(ServiceConfig.builder("userService", Config.getBaseUrl())
-                        .authProfile("admin")
-                        .header("Content-Type", "application/json")
-                        .build())
-                .build();
+## Cấu hình và viết test consumer
 
-        CredentialManager credentials = new CredentialManager(Map.of(
-                "admin", actor -> AuthMaterial.bearer(login(actor), expiresAt)
-        ));
+`template-consumer-api` hiện có `ConsumerConfig`, `ConfiguredAuthProvider`, `ConsumerRuntimeFactory`, `BaseProjectApiTest`, `SampleApiClient` và smoke test offline. Config loader của **template** đọc system properties, environment variables, `config-local.properties`, rồi `src/test/resources/config.properties`; các key như `auth.mode` map thành `AUTH_MODE`. Framework core không tự đọc cấu hình sản phẩm.
 
-        ApiClient api = new RestAssuredApiClient(config, credentials, new CurrentTestTraceSink());
-        userClient = new UserClient(api);
+Auth adapter của template hỗ trợ token Bearer/cookie tĩnh và login JSON cơ bản. Consumer có giao thức khác như GConnect OAuth cần `AuthProvider` riêng trong consumer. Token/session cache trong memory theo profile/actor trong vòng đời runtime; không phải session bền vững trên đĩa. Framework API hiện không tự duy trì cookie jar từ mọi response. Xem [auth/session trong README template](template-consumer-api/README.md#authsession-có-sẵn-trong-consumer).
 
-        return new ApiTestRuntime(config, credentials, api);
-    }
-}
-```
+Domain client như UserClient bọc `ApiClient` và giữ method/path/serialization của sản phẩm; test scenario gọi client rồi assert response. Resource test tạo ra đăng ký qua `resources()` để framework cleanup kể cả khi assertion fail. Không gọi RestAssured trực tiếp trong test và không commit URL có credential, password, token hoặc response nhạy cảm.
 
-### 2. Tạo Domain Client
-Bọc `ApiClient` bên trong các client theo domain. Client chỉ xử lý serialization, method, và endpoint:
+Template có ví dụ CSV/TestNG DataProvider và SQL/JDBC tùy chọn, mặc định không chạy. `framework-sql` cung cấp JDBC client dùng chung; SQL, JDBC driver và assertions theo schema thuộc consumer. NoSQL module hiện triển khai MongoDB với find/count/command; JSON query placeholder được escape theo ngữ cảnh và tham số thiếu báo lỗi. Xem mục [CSV và SQL/JDBC](template-consumer-api/README.md#test-data-từ-csv).
 
-```java
-public final class UserClient {
-    private final ApiClient api;
+### Quy chuẩn cho trợ lý AI
 
-    public UserClient(ApiClient api) { this.api = api; }
+Template đóng gói `.agents/AGENTS.md` và các rule trong `.agents/rules/` làm nguồn chuẩn. `AGENTS.md` ở root hướng Cursor/Antigravity/Codex tới bộ quy chuẩn; `.cursor/rules/` và `.github/copilot-instructions.md` là điểm vào theo convention của từng công cụ, yêu cầu đọc cùng nguồn `.agents/`. Khi scaffold bằng script hoặc lệnh copy `template-consumer-api/.`, các file ẩn này được giữ nguyên.
 
-    public ApiResponse getUser(Actor actor, String userId) {
-        return api.execute(ApiRequest.get("userService", "/api/v1/users/" + userId)
-                .actor(actor)
-                .build());
-    }
+Xem [configuration](docs/configuration.md), [architecture](docs/architecture.md), [test design](docs/test-design.md), [CI/CD](docs/ci-cd.md), [migration](docs/migration.md) và [quality audit](docs/quality-audit.md).
 
-    public ApiResponse createUser(Actor actor, UserRequest body) {
-        return api.execute(ApiRequest.post("userService", "/api/v1/users")
-                .actor(actor)
-                .body(body)
-                .build());
-    }
-}
-```
+## Versioning và release
 
-### 3. Viết Test Class
-Test kế thừa `runtime()`, `api()`, `context()`, và domain client:
+- Push/merge lên develop kích hoạt pipeline; snapshot hiện trong source là 1.0.2-SNAPSHOT.
+- Pipeline deploy dùng project ID và API URL do GitLab CI cung cấp, xác thực bằng CI_JOB_TOKEN qua ci_settings.xml.
+- Tag release vX.Y.Z kích hoạt pipeline đổi version reactor thành X.Y.Z rồi deploy.
+- Dùng release version đã kiểm tra trên Registry cho consumer cần build lặp lại ổn định. Snapshot là version phát triển có thể thay đổi.
 
-```java
-public class UserApiTest extends BaseProjectApiTest {
+## Quy tắc an toàn
 
-    @Test
-    public void testGetUserSuccess() {
-        Actor admin = Actor.of("admin-user", "admin");
-        context().actor(admin);
-
-        ApiResponse response = userClient.getUser(admin, "user-123");
-        response.requireStatus(200);
-
-        Assert.assertEquals(response.json().path("data.status").asText(), "ACTIVE");
-    }
-}
-```
-
-### 4. Chạy & xem Trace
-- **Chạy tất cả test:**
-  ```bash
-  ./mvnw test
-  ```
-- **Chạy với URL môi trường tùy chỉnh:**
-  ```bash
-  ./mvnw test -Dbase.url="https://your-application.example"
-  ```
-- **Chạy 1 group hoặc class test cụ thể:**
-  ```bash
-  ./mvnw test -Dgroups="smoke"
-  ./mvnw test -Dtest="UserApiTest"
-  ```
-- **Trace JSON đã redact** cho mọi request/response được tự động thu vào `target/api-traces/`.
-
-Xem thêm [architecture](docs/architecture.md), [configuration](docs/configuration.md),
-[flow preview](docs/framework-flow-preview.md), [test design](docs/test-design.md)
-và [migration](docs/migration.md).
-
-[Quality audit](docs/quality-audit.md) đã publish, đối chiếu implementation và bằng chứng kiểm thử với rubric chung 10/10 của framework.
-
-## Quy tắc không thỏa hiệp
-
-- Không tên dự án hay domain nào trong module framework.
-- Không secret trong properties, source, log, hay report.
+- Không đưa nghiệp vụ sản phẩm hoặc credentials vào framework.
 - TLS verification bật mặc định.
-- POST/PATCH/DELETE không được retry trừ khi được đánh dấu tường minh là idempotent.
-- Mọi request đều đi qua `ApiClient`.
-- Mọi resource được tạo ra đều được đăng ký để dọn dẹp.
-- CI phải fail khi test fail.
-- URL request tuyệt đối và credential nhúng trong service URI bị từ chối trước khi thực thi transport.
-- JSON, text kiểu form/query, Bearer token, và exception message được redact trước khi trace.
+- Mọi HTTP request đi qua ApiClient.
+- POST/PATCH/DELETE không retry nếu chưa được xác nhận idempotent.
+- Mọi resource test tạo ra cần cleanup.
+- CI phải fail khi Java verify/test fail.
+- Trace phải redacted trước khi lưu artifact.

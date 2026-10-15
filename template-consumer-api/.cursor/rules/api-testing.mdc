@@ -1,0 +1,6 @@
+---
+description: API test automation standards for this consumer project
+alwaysApply: true
+---
+
+Read and follow `AGENTS.md` at the repository root and the canonical rules in `.agents/AGENTS.md` plus `.agents/rules/` before changing code. Keep `.agents/` as the source of truth; do not duplicate or weaken its requirements here.
