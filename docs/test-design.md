@@ -34,6 +34,7 @@ public void employeeLeaveIsApprovedThroughEveryLevel() {
 - Use DTOs for stable schemas; reserve maps for truly dynamic payloads.
 - Assert status, contract and business state separately.
 - Do not change an expected result to match a known backend bug.
+- Never skip a required assertion or switch to another endpoint, record, actor, fixture, or accepted status after the primary path fails. Bounded polling may wait for the same business condition, but timeout must fail the test. UI locator fallback is a separate concern and may select another locator for the same control; it must not weaken the business assertion.
 - Negative tests should select `RetryMode.NEVER` when retry would distort the result.
 - Destructive tests belong to a protected/manual group.
 

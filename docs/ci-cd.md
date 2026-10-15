@@ -21,11 +21,11 @@ The independent starter project in `template-consumer-api/` has its own `.gitlab
 3. Resolves the framework from the project Maven endpoint and runs `clean verify`.
 4. Publishes Surefire XML and redacted API traces as job artifacts.
 
-For the current Framework API project, set `API_FRAMEWORK_PROJECT_ID=1263`. Add the consumer project to the framework project's CI/CD job-token allowlist so its token can read the private package. `API_FRAMEWORK_VERSION` is optional and defaults to `1.0.1-SNAPSHOT`; select a published release version for a stable consumer pipeline.
+Set `API_FRAMEWORK_PROJECT_ID` to the Framework API GitLab project ID for your instance. Add the consumer project to the framework project's CI/CD job-token allowlist so its token can read the private package. `API_FRAMEWORK_VERSION` is optional and defaults to `1.0.2-SNAPSHOT`; select a published release version for a stable consumer pipeline.
 
 The template smoke test uses an in-process JDK HTTP server. It checks Maven dependency resolution and the framework wiring without contacting a real service. Consumer API tests that need a product environment must receive their URL and credentials from protected/masked CI variables or a secret manager.
 
-## 3. Consumer Test Suite Blueprint (Target Architecture for `api_hrm`, `api-map`)
+## 3. Consumer Test Suite Blueprint (Target Architecture for consumer projects)
 
 For consumer repositories containing large enterprise regression suites (hundreds or thousands of API test scenarios), the recommended target pipeline is:
 
@@ -40,7 +40,10 @@ The pipeline must use the repository already checked out by the CI runner. Never
 embedded in YAML. Test failures must produce a non-zero build result; reporting and notification jobs may use
 `when: always` but must not overwrite that result.
 
-Start parallel execution at class level after migration. Keep shared-tenant and destructive suites serial.
+Start with `-Dapi.test.parallel=classes` after migrating suites and isolating their data. The template caps this at
+four workers unless `-Dapi.test.thread-count` is supplied. Method-level parallelism can be selected with
+`-Dapi.test.parallel=methods` when every invocation owns its data and has no shared mutable test state. Keep
+shared-tenant and destructive suites serial.
 Shard regression tests by historical duration rather than class count, and distinguish runner retry from test retry.
 
 Publish these artifacts:

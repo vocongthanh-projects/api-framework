@@ -2,7 +2,7 @@
 
 Version 1 deliberately has no classpath configuration DSL. Consumers build immutable typed configuration from
 environment variables or their existing configuration provider. This keeps the framework aligned with the current
-`api_hrm` and `api-map` deployment model.
+consumer projects deployment model.
 
 ```java
 FrameworkConfig config = FrameworkConfig.builder()

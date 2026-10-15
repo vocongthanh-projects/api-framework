@@ -31,14 +31,17 @@ use that capability carefully and must never insert credentials directly in sour
 ## State and parallelism
 
 - Credentials are cached by `(auth profile, actor alias)` in a concurrent map.
-- `TestContext` is created per test method.
+- `TestContext` and `ResourceLedger` are stored per executing thread and created for each test invocation.
 - `TestContextHolder` is thread-local only inside the TestNG integration and is always removed after a test.
 - The transport accepts a `TraceSink`; `CurrentTestTraceSink` is the explicit TestNG-to-transport bridge.
 - Resource cleanup state belongs to the individual test context.
 - No mutable global domain state is allowed.
 
-The first safe parallel mode for migrated projects is TestNG `parallel="classes"`. Method-level parallelism
-requires every method to own all actors and resources and is not the default.
+The consumer template keeps tests sequential by default. Set `-Dapi.test.parallel=classes` to enable bounded
+class-level parallelism (four workers by default). The same switch accepts `methods`, but use it only when each
+test invocation owns its data and does not mutate shared test-instance or static state. Shared tenant data and
+destructive workflows should remain serial or use isolated data per invocation. Trace reports include a unique
+invocation identifier so parallel and repeated executions do not overwrite one another.
 
 ## Extension points
 

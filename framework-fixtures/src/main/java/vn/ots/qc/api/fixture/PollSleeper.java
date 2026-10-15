@@ -4,9 +4,9 @@ import java.time.Duration;
 
 @FunctionalInterface
 interface PollSleeper {
-    void sleep(Duration duration) throws InterruptedException;
+  void sleep(Duration duration) throws InterruptedException;
 
-    static PollSleeper threadSleep() {
-        return duration -> Thread.sleep(duration.toMillis());
-    }
+  static PollSleeper threadSleep() {
+    return duration -> Thread.sleep(duration.toMillis());
+  }
 }

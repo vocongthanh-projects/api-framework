@@ -1,4 +1,4 @@
-# Migration from api-map and api_hrm
+# Migration guidance for consumer projects
 
 ## Phase 0: secure and freeze
 
@@ -8,9 +8,9 @@
 4. Pin JDK 17 for Maven and CI.
 5. Record baseline pass/fail/skip counts and runtime.
 
-## Phase 1: api-map pilot
+## Phase 1: the pilot consumer pilot
 
-1. Implement its encrypted login as an `AuthProvider` in `api-map`, not in framework core.
+1. Implement its encrypted login as an `AuthProvider` in `the pilot consumer`, not in framework core.
 2. Create Maps domain clients around `ApiClient`.
 3. Migrate login, register, forgot-password and logout tests.
 4. Compare old and new results for several CI runs.

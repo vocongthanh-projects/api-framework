@@ -26,44 +26,38 @@ resources().register("record", id, () -> client.delete(id));
 
 ## Trước khi bắt đầu
 
-1. Trong GitLab project Framework API (ID 1263), xác nhận pipeline trên develop xanh.
-2. Mở Deploy → Package Registry và xác nhận các artifact cần dùng có version 1.0.1-SNAPSHOT.
+1. Trong GitLab project Framework API, xác nhận pipeline trên branch phát hành xanh.
+2. Mở Deploy → Package Registry và xác nhận các artifact cần dùng có version 1.0.2-SNAPSHOT.
 3. Nếu package chưa xuất hiện, chờ/điều tra deploy job trước khi tạo consumer dựa vào version đó.
 
 Push source framework thành công không đồng nghĩa package đã được publish.
 
 ## Tạo repository sản phẩm từ template
 
-Ví dụ tạo api-g-connect:
+Ví dụ tạo một consumer project:
 
-1. Tạo repository GitLab rỗng cho api-g-connect. Nên tạo repo không có README/license để tránh phải xử lý hai lịch sử ban đầu.
+1. Tạo repository GitLab rỗng cho consumer project. Nên tạo repo không có README/license để tránh phải xử lý hai lịch sử ban đầu.
 2. Clone repo sản phẩm:
 
 ~~~bash
-git clone "$API_G_CONNECT_GIT_URL"
-cd api-g-connect
+git clone "$CONSUMER_GIT_URL"
+cd my-api-test
 ~~~
 
-Trước đó, đặt API_G_CONNECT_GIT_URL bằng Clone URL lấy từ GitLab hoặc thay biến bằng URL thật. Không paste nguyên chuỗi placeholder.
+Trước đó, đặt CONSUMER_GIT_URL bằng Clone URL lấy từ GitLab hoặc thay biến bằng URL thật. Không paste nguyên chuỗi placeholder.
 
 3. Scaffold vào repository mới đang rỗng. Script tự copy cả file ẩn như `.agents/`, `.cursor/`, `.github/`, `.gitignore` và `.gitlab-ci.yml`, đồng thời bỏ thư mục build `target/`:
 
 ~~~bash
 cd /path/to/api-framework
-./scripts/create-consumer-project.sh /path/to/api-g-connect
+./scripts/create-consumer-project.sh /path/to/my-api-test --package-root vn.ots.qc.api.consumer
 ~~~
 
-Hoặc copy thủ công sau khi xóa build output trong template. Dấu chấm cuối source giúp lệnh lấy cả file ẩn:
-
-~~~bash
-cd /path/to/api-framework/template-consumer-api
-./mvnw clean
-cp -R /path/to/api-framework/template-consumer-api/. /path/to/api-g-connect/
-~~~
+Không nên đổi package bằng cách chỉ di chuyển thư mục `template` thủ công vì sẽ để lại các thư mục cha rỗng. Script có tùy chọn `--package-root` để đổi package và dọn namespace mẫu ngay khi khởi tạo. Nếu copy thủ công, hãy chuyển toàn bộ package root thay vì chỉ chuyển thư mục `template`.
 
 Template giữ `.agents/AGENTS.md` và `.agents/rules/` làm bộ quy chuẩn gốc. `AGENTS.md` ở root cùng `.cursor/rules/api-testing.mdc` và `.github/copilot-instructions.md` hướng các trợ lý tương ứng đọc bộ quy chuẩn đó; Antigravity tự nạp rules trong `.agents/`. Mở đầu phiên làm việc với công cụ khác, yêu cầu trợ lý đọc `.agents/AGENTS.md` nếu phiên bản hoặc cấu hình hiện tại không tự nạp file.
 
-4. Đổi groupId và artifactId trong pom.xml theo namespace của sản phẩm, đồng thời đổi Java package `vn.ots.qc.consumer.template` sang namespace của dự án. Không đổi groupId/artifactId/version của các dependency framework `vn.ots.qc`.
+4. Đổi groupId và artifactId trong pom.xml theo namespace của sản phẩm. Dùng `--package-root` khi scaffold để Java package khớp namespace dự án. Không đổi groupId/artifactId/version của các dependency framework `vn.ots.qc`.
 5. Kiểm tra remote và file trước khi commit:
 
 ~~~bash
@@ -81,7 +75,7 @@ git commit -m "chore: initialize API consumer from template"
 git push -u origin main
 ~~~
 
-Nếu project dùng develop làm branch chính, thay main bằng develop. Kiểm tra git remote -v trước push để chắc remote là api-g-connect chứ không phải Framework API.
+Nếu project dùng develop làm branch chính, thay main bằng develop. Kiểm tra git remote -v trước push để chắc remote là repository consumer chứ không phải Framework API.
 
 ## Cài Framework từ GitLab Maven Package Registry
 
@@ -89,11 +83,11 @@ Nếu project dùng develop làm branch chính, thay main bằng develop. Kiểm
 
 Template pipeline đọc các biến sau:
 
-- API_FRAMEWORK_PROJECT_ID: ID project Framework API; giá trị hiện tại là 1263.
-- API_FRAMEWORK_VERSION: optional; mặc định 1.0.1-SNAPSHOT.
+- API_FRAMEWORK_PROJECT_ID: ID project Framework API trên GitLab instance đang dùng.
+- API_FRAMEWORK_VERSION: optional; mặc định 1.0.2-SNAPSHOT.
 - CI_JOB_TOKEN: GitLab tự cấp cho job, không tạo hoặc commit token này.
 
-Trong consumer project, mở Settings → CI/CD → Variables và tạo API_FRAMEWORK_PROJECT_ID=1263. Sau đó tại Framework API mở Settings → CI/CD → Job token permissions/allowlist và cho phép job token từ project api-g-connect đọc package.
+Trong consumer project, mở Settings → CI/CD → Variables và đặt `API_FRAMEWORK_PROJECT_ID` bằng ID của project Framework API. Sau đó tại Framework API mở Settings → CI/CD → Job token permissions/allowlist và cho phép job token từ consumer project đọc package.
 
 Template .gitlab-ci.yml tạo Maven settings dùng server ID api-framework-registry, username gitlab-ci-token và CI_JOB_TOKEN. Không cần đưa Personal Access Token vào CI variables. Nếu job lỗi 401/403, kiểm tra allowlist và quyền package trước khi đổi POM.
 
@@ -117,8 +111,8 @@ Dùng token có quyền đọc package theo policy của GitLab tổ chức. Đ�
 
 ~~~bash
 ./mvnw -U \
-  -Dapi.framework.version=1.0.1-SNAPSHOT \
-  -Dapi.framework.repository.url="https://<GITLAB_HOST>/api/v4/projects/1263/packages/maven" \
+  -Dapi.framework.version=1.0.2-SNAPSHOT \
+  -Dapi.framework.repository.url="https://<GITLAB_HOST>/api/v4/projects/<PROJECT_ID>/packages/maven" \
   clean verify
 ~~~
 
@@ -129,9 +123,9 @@ Thay host theo GitLab instance. Self-managed GitLab hiện có thể chỉ cung 
 Nếu đang làm việc trên checkout framework cùng máy, có thể cài toàn bộ reactor vào Maven local repository:
 
 ~~~bash
-cd /Users/thanhvc/Workspace/api-framework
+cd /path/to/api-framework
 ./mvnw clean install
-cd /PATH/TO/api-g-connect
+cd /path/to/my-api-test
 ./mvnw clean verify
 ~~~
 
@@ -175,7 +169,7 @@ export AUTH_PASSWORD='<secret>'
 
 Giá trị JSON Pointer mặc định `/access_token` và `/expires_in` khớp phản hồi OAuth-style thông dụng; thay chúng theo response thật. Login mẫu gửi JSON POST và hỗ trợ một cặp username/password. OAuth client credentials, refresh-token flow riêng, CSRF, MFA, redirect login, custom signing hoặc session cookie cần protocol đặc thù thì triển khai `AuthProvider` riêng trong consumer, thay `ConfiguredAuthProvider` hoặc đăng ký thêm profile. Session cookie chỉ tự được đọc ở lần đăng nhập; framework gửi lại cookie đã cache nhưng hiện không duy trì cookie jar từ mọi response.
 
-Trong api-g-connect:
+Trong consumer project:
 
 - Thay BaseProjectApiTest mẫu đang dựng HTTP server in-process bằng runtime dự án thật; giữ `ConsumerRuntimeFactory` để auth profile được nối vào `CredentialManager`.
 - Dùng RestAssuredApiClient làm transport qua framework.
@@ -232,9 +226,17 @@ Chạy riêng smoke:
 
 Khi thêm test sản phẩm thật, các test đó có thể cần endpoint và credential riêng. Surefire XML nằm ở target/surefire-reports/; trace redacted ở target/api-traces/.
 
+Template chạy tuần tự mặc định. Sau khi test đã độc lập dữ liệu, bật parallel theo class với giới hạn bốn worker:
+
+~~~bash
+./mvnw -Dapi.test.parallel=classes -Dapi.test.thread-count=4 clean verify
+~~~
+
+Có thể dùng `-Dapi.test.parallel=methods` khi từng lần chạy tự sở hữu dữ liệu và không sửa state dùng chung trong test class. Giữ các luồng destructive hoặc dùng chung tenant ở chế độ tuần tự. `BaseApiTest` tạo context, cleanup ledger và trace ID riêng cho mỗi lần gọi test.
+
 ## Dependency/version và phát hành
 
-- Template hiện khai báo framework version 1.0.1-SNAPSHOT.
+- Template hiện khai báo framework version 1.0.2-SNAPSHOT.
 - develop của API Framework publish snapshot; tag vX.Y.Z phát hành version ổn định X.Y.Z.
 - Với pipeline sản phẩm cần tái lập ổn định, chọn version release đã xuất hiện trong Package Registry thay vì SNAPSHOT.
 - Khi cập nhật snapshot, chạy Maven với -U để yêu cầu kiểm tra metadata mới; không dùng -U như cách sửa lỗi quyền truy cập.

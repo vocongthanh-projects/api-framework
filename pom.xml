@@ -6,7 +6,7 @@
 
     <groupId>vn.ots.qc</groupId>
     <artifactId>api-framework-parent</artifactId>
-    <version>1.0.1-SNAPSHOT</version>
+    <version>1.0.2-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>API Framework</name>
@@ -35,6 +35,8 @@
         <source.version>3.3.1</source.version>
         <javadoc.version>3.11.2</javadoc.version>
         <mongodb.version>5.3.1</mongodb.version>
+        <spotless.version>3.10.4</spotless.version>
+        <google-java-format.version>1.28.0</google-java-format.version>
     </properties>
 
     <dependencyManagement>
@@ -131,6 +133,28 @@
             </plugins>
         </pluginManagement>
         <plugins>
+            <plugin>
+                <groupId>com.diffplug.spotless</groupId>
+                <artifactId>spotless-maven-plugin</artifactId>
+                <version>${spotless.version}</version>
+                <configuration>
+                    <java>
+                        <googleJavaFormat>
+                            <version>${google-java-format.version}</version>
+                            <style>GOOGLE</style>
+                        </googleJavaFormat>
+                    </java>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>check-java-format</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>

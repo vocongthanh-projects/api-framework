@@ -35,7 +35,7 @@ test:
   script:
     - ./mvnw $MAVEN_CLI_OPTS install
     - cd template-consumer-api
-    - ./mvnw $MAVEN_CLI_OPTS clean verify
+    - ./mvnw $MAVEN_CLI_OPTS -Dapi.test.parallel=classes clean verify
     - cd "$CI_PROJECT_DIR"
   artifacts:
     when: always

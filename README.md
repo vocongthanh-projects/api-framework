@@ -25,6 +25,11 @@ Framework đã có các tiện ích kiểm thử dùng chung trong `framework-fi
 - `Eventually.within(...).pollEvery(...).until(...)` chờ điều kiện cuối cùng đúng thay cho `Thread.sleep` cố định.
 - `ResourceLedger` đăng ký cleanup và chạy theo thứ tự LIFO; `BaseApiTest` cấp ledger theo từng test.
 
+Template chạy tuần tự mặc định. Có thể bật TestNG class parallelism giới hạn bốn worker bằng
+`-Dapi.test.parallel=classes`; chỉ bật sau khi các test đã cô lập dữ liệu. `BaseApiTest` giữ context và cleanup
+ledger theo thread, còn trace có ID riêng cho mỗi invocation. Xem [hướng dẫn template](template-consumer-api/README.md)
+để biết cách bật parallel và giới hạn worker.
+
 Ví dụ:
 
 ~~~java
@@ -58,7 +63,7 @@ Tóm tắt:
 3. Scaffold project bằng script (script từ chối destination không rỗng, copy cả file/thư mục ẩn và bỏ Maven `target/`):
 
 ~~~bash
-./scripts/create-consumer-project.sh /path/to/new-api-test
+./scripts/create-consumer-project.sh /path/to/new-api-test --package-root vn.ots.qc.api.newproject
 ~~~
 
 Template đã chứa `.agents/`, `AGENTS.md`, `.cursor/` và `.github/copilot-instructions.md`; các file này được giữ lại trong project mới.
@@ -67,7 +72,7 @@ Template đã chứa `.agents/`, `AGENTS.md`, `.cursor/` và `.github/copilot-in
 6. Viết client, config và test nghiệp vụ trong consumer repository; giữ framework modules ở vai trò dependency.
 7. Chạy verify, commit/push đúng remote rồi xác nhận consumer pipeline.
 
-Framework Package Registry project hiện có ID 1263. Trong template, ID được truyền qua biến CI API_FRAMEWORK_PROJECT_ID thay vì hard-code vào POM. Đưa consumer project vào job-token allowlist của Framework API để CI consumer đọc được package.
+Project ID của Framework Package Registry được truyền qua biến CI `API_FRAMEWORK_PROJECT_ID`, không hard-code vào POM. Lấy ID từ cấu hình GitLab của instance đang dùng. Đưa consumer project vào job-token allowlist của Framework API để CI consumer đọc được package.
 
 ## Dùng Framework API trực tiếp
 
@@ -77,7 +82,7 @@ Nếu dự án đã có Maven structure riêng, có thể khai báo project-scop
 <repositories>
     <repository>
         <id>api-framework-registry</id>
-        <url>https://your-gitlab-host/api/v4/projects/1263/packages/maven</url>
+        <url>https://your-gitlab-host/api/v4/projects/<PROJECT_ID>/packages/maven</url>
     </repository>
 </repositories>
 
@@ -85,25 +90,25 @@ Nếu dự án đã có Maven structure riêng, có thể khai báo project-scop
     <dependency>
         <groupId>vn.ots.qc</groupId>
         <artifactId>framework-core</artifactId>
-        <version>1.0.1-SNAPSHOT</version>
+        <version>1.0.2-SNAPSHOT</version>
         <scope>test</scope>
     </dependency>
     <dependency>
         <groupId>vn.ots.qc</groupId>
         <artifactId>framework-fixtures</artifactId>
-        <version>1.0.1-SNAPSHOT</version>
+        <version>1.0.2-SNAPSHOT</version>
         <scope>test</scope>
     </dependency>
     <dependency>
         <groupId>vn.ots.qc</groupId>
         <artifactId>framework-testng</artifactId>
-        <version>1.0.1-SNAPSHOT</version>
+        <version>1.0.2-SNAPSHOT</version>
         <scope>test</scope>
     </dependency>
     <dependency>
         <groupId>vn.ots.qc</groupId>
         <artifactId>framework-http-restassured</artifactId>
-        <version>1.0.1-SNAPSHOT</version>
+        <version>1.0.2-SNAPSHOT</version>
         <scope>test</scope>
     </dependency>
 </dependencies>
@@ -127,15 +132,15 @@ Có thể truyền repository URL khi build nếu consumer POM dùng profile c�
 
 ~~~bash
 ./mvnw -U \
-  -Dapi.framework.version=1.0.1-SNAPSHOT \
-  -Dapi.framework.repository.url="https://<GITLAB_HOST>/api/v4/projects/1263/packages/maven" \
+  -Dapi.framework.version=1.0.2-SNAPSHOT \
+  -Dapi.framework.repository.url="https://<GITLAB_HOST>/api/v4/projects/<PROJECT_ID>/packages/maven" \
   clean verify
 ~~~
 
 Nếu đang phát triển Framework API local, thay vì đọc package Registry có thể cài reactor vào local Maven repository rồi build template:
 
 ~~~bash
-cd /Users/thanhvc/Workspace/api-framework
+cd /path/to/api-framework
 ./mvnw clean install
 cd template-consumer-api
 ./mvnw clean verify
@@ -161,7 +166,7 @@ Xem [configuration](docs/configuration.md), [architecture](docs/architecture.md)
 
 ## Versioning và release
 
-- Push/merge lên develop kích hoạt pipeline; snapshot hiện trong source là 1.0.1-SNAPSHOT.
+- Push/merge lên develop kích hoạt pipeline; snapshot hiện trong source là 1.0.2-SNAPSHOT.
 - Pipeline deploy dùng project ID và API URL do GitLab CI cung cấp, xác thực bằng CI_JOB_TOKEN qua ci_settings.xml.
 - Tag release vX.Y.Z kích hoạt pipeline đổi version reactor thành X.Y.Z rồi deploy.
 - Dùng release version đã kiểm tra trên Registry cho consumer cần build lặp lại ổn định. Snapshot là version phát triển có thể thay đổi.

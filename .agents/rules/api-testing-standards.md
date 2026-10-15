@@ -17,6 +17,25 @@ Quy tắc bắt buộc cho cả Kỹ sư kiểm thử và Trợ lý AI khi phát
 
 ---
 
+### 1.1 NGUYÊN TẮC THIẾT KẾ DOMAIN API CLIENT VÀ RANH GIỚI MODEL
+- **Mỗi Feature / Bounded Context có Domain Client chuyên trách**:
+  - Đặt tên theo nghiệp vụ: `<Feature>Client` hoặc `<Subsystem><Feature>Client` khi cần phân biệt rõ hệ thống/cổng, ví dụ `CitizenReflectionClient`, `InternalReflectionClient`, `CitizenAuthClient`.
+  - Một client có thể chứa nhiều thao tác/API thuộc cùng một feature và cùng một ranh giới dịch vụ; không tạo một client riêng cho từng endpoint nhỏ.
+  - **CẤM God Client**: Không gom API của nhiều feature hoặc nhiều phân hệ độc lập vào một client chỉ vì chúng cùng thuộc một sản phẩm. Khi client bắt đầu gánh các trách nhiệm nghiệp vụ độc lập, tách theo feature/bounded context.
+  - Client chỉ điều phối request/response của API domain qua `ApiClient`; không đặt assertion, kịch bản test hoặc logic của Test Suite vào client.
+- **Model thuộc về ranh giới API sở hữu contract**:
+  - Request/response DTO của phân hệ phải nằm trong model package do phân hệ đó quản lý. **CẤM** phân hệ này import DTO từ phân hệ độc lập khác (ví dụ `cbkc_internal` import `ExternalReflectionDetail` từ `cbkc_external`).
+  - Nếu nhiều phân hệ thực sự dùng chung một contract ổn định, đặt DTO dùng chung trong package/module trung lập như `shared.model`; không để một phân hệ làm chủ DTO của phân hệ còn lại. Chỉ chia sẻ sau khi xác nhận schema và ngữ nghĩa giống nhau.
+  - Khi tách client, chuyển các DTO liên quan, response envelope và kiểu lồng nhau cần thiết cùng ranh giới; không để lại import chéo gián tiếp.
+- **Quan hệ giữa Client và Test Suite**:
+  - Test Suite của feature tập trung toàn bộ smoke, data-driven và CRUD/lifecycle scenario của feature theo quy tắc Mục 1; dùng Domain Client tương ứng thay vì tự dựng request lặp lại.
+  - Test Suite E2E/workflow có thể phối hợp nhiều Domain Client để đi qua nhiều phân hệ; không nhân bản endpoint logic sang một God Client hoặc tạo suite trùng feature chỉ để phân loại loại test.
+- **Cấu trúc package theo quy mô**:
+  - Dự án nhỏ có thể giữ `client/`, `model/`, `tests/` ở cấp package gốc.
+  - Dự án có nhiều phân hệ/cổng độc lập phải nhóm theo `modules/<subsystem>/{client,model,tests}/`; đặt model dùng chung thật sự trong `shared/model/`.
+
+---
+
 ## 2. ASSERT THEO CHUẨN BUSINESS & BÁO CÁO THẬT (KHÔNG NẮN THEO LOGIC SAI CỦA BACKEND)
 - **Kiểm thử là tấm gương phản chiếu chất lượng thật**:
   - Assertion phải dựa hoàn toàn vào **Tài liệu đặc tả (BRD/PRD), Business Logic chuẩn, và Chuẩn HTTP RESTful**.
@@ -33,6 +52,16 @@ Quy tắc bắt buộc cho cả Kỹ sư kiểm thử và Trợ lý AI khi phát
 - Không coi field `data` bị thiếu hoặc không phải array là kết quả rỗng. Xác nhận response envelope, `data` và kiểu dữ liệu trước khi kiểm tra số lượng phần tử.
 - Với tìm kiếm, kiểm tra cả tổng số lượng và nội dung item khớp điều kiện theo contract. Với điều kiện không có kết quả, xác nhận response hợp lệ và count bằng 0.
 - Không viết nhiều expected value thay thế nhau (ví dụ business code `0` hoặc `200`) nếu contract không quy định cả hai.
+
+### 2.2 CẤM FALLBACK CHE LỖI HOẶC LÀM TEST PASS GIẢ
+- Test phải phản ánh đúng kết quả mà người dùng thực tế nhận được. Nếu API trả dữ liệu null/thiếu field, sai trạng thái, lỗi HTTP, không tìm thấy bản ghi hoặc không đồng bộ đúng, test phải fail tại assertion tương ứng và báo rõ lỗi.
+- **CẤM** dùng nhánh dự phòng để đổi sang endpoint, actor, bản ghi, dữ liệu, trạng thái hoặc expected value khác sau khi luồng chính thất bại, nhằm giữ test xanh. Ví dụ: API tra cứu theo mã không có dữ liệu thì chuyển sang endpoint khác rồi coi như đạt; không thấy bản ghi cần cập nhật thì âm thầm lấy bản ghi bất kỳ; nhận `null` thì bỏ qua bước kiểm tra.
+- **CẤM** bỏ qua assertion bằng `if (status == 200)`, `if (value != null)`, `ifPresent(...)`, `hasNonNull(...)` hoặc `catch` rồi tiếp tục khi điều kiện đó là điều test đang cần xác minh. Hãy assert status/field bắt buộc trước, sau đó mới kiểm tra giá trị. Chỉ dùng điều kiện để rẽ nhánh khi chính điều kiện đó là một phần của đặc tả test và mọi nhánh đều có assertion rõ ràng.
+- **CẤM** nới lỏng kết quả bằng nhiều giá trị thay thế (`DONE || PROCESSED`), default khi đọc response (`asText(defaultValue)`), hoặc assertion tổng quát chỉ xác nhận response không null, nếu contract không cho phép các kết quả đó.
+- Khi precondition không tồn tại hoặc fixture không hợp lệ, test phải fail rõ ràng. Chỉ được tạo fixture thay thế nếu đó là bước chuẩn bị được khai báo trước trong chính kịch bản; fixture phải được xác minh đúng trạng thái ban đầu, và không được thay đổi âm thầm mục tiêu hoặc ý nghĩa nghiệp vụ của test.
+- Polling/eventually và retry có giới hạn được phép để chờ cùng một điều kiện nghiệp vụ cuối cùng (ví dụ đồng bộ bất đồng bộ). Hết timeout hoặc hết retry mà điều kiện chưa đạt thì test phải fail; không đổi điều kiện mong đợi hay chuyển sang kết quả dễ đạt hơn. Retry ở tầng HTTP phải tuân thủ policy an toàn của framework, không biến response lỗi thành pass.
+- **Phạm vi UI automation:** fallback giữa các selector/locator để tìm cùng một control UI có thể dùng khi selector chính không ổn định, miễn là locator thay thế cùng đại diện cho control và hành động nghiệp vụ dự kiến. Đây là fallback định vị phần tử; không được dùng để thay đổi kết quả kỳ vọng hoặc che lỗi nghiệp vụ/API phía sau thao tác UI.
+- Ví dụ đúng: `response.requireStatus(200); Assert.assertNotNull(response.value()); Assert.assertEquals(response.value().status(), expectedStatus);` Nếu endpoint hoặc dữ liệu bắt buộc không đáp ứng, để test fail và ghi nhận lỗi thay vì chuyển qua nhánh thành công giả.
 
 ---
 
@@ -77,7 +106,8 @@ Quy tắc bắt buộc cho cả Kỹ sư kiểm thử và Trợ lý AI khi phát
       - `src/test/resources/nosql/<query>.json` cho NoSQL/MongoDB.
       - `src/test/resources/sql/<query>.sql` cho SQL/Relational DB.
     - Sử dụng placeholder `${param}` hoặc `{{param}}` để nạp tham số động vào dữ liệu/truy vấn.
-- Không dùng fallback chứa dữ liệu kịch bản trong Java (`asText("...")`, magic number, default tên/value). Field bắt buộc thiếu trong resource phải báo lỗi rõ ràng để fixture lỗi không biến thành một kịch bản khác.
+- Không dùng fallback chứa dữ liệu kịch bản trong Java (`asText("...")`, magic number, default tên/value, fallback URL/domain). Field bắt buộc thiếu trong resource/config phải báo lỗi rõ ràng qua `require()` để fixture lỗi không biến thành một kịch bản khác.
+- Tuyệt đối không hardcode `wardCode`, mã tỉnh (`provinceCode`), tên tỉnh hay toạ độ địa bàn trong Java code. Toàn bộ thông tin địa bàn hành chính phải được đưa ra `src/test/resources/testdata/<feature>.csv` hoặc quản lý qua `Config.TestLocation` nạp từ `test.location.*` trong `config-local.properties`.
 - Chỉ giữ trong Java các hằng số thuộc contract/schema (HTTP path, tên field, enum protocol); URL, portal/tenant/environment ID, credential và mọi expected/test value phải đến từ config hoặc fixture phù hợp.
 - Tách dữ liệu test khỏi config: expected status, keyword, payload value và boundary case nằm trong fixture; endpoint, tenant code, timeout môi trường và credential nằm trong config.
 
@@ -110,19 +140,25 @@ Quy tắc bắt buộc cho cả Kỹ sư kiểm thử và Trợ lý AI khi phát
 ## 7. CẤU TRÚC PACKAGE CONSUMER CHUẨN
 ```
 src/test/java/<package_root>/
-├── auth/           # OAuth, AuthProvider, Token/Key manager, Encryption utils
-├── client/         # Domain API Clients (<Feature>Client) gọi API qua ApiClient
-├── config/         # Cấu hình chuẩn (Config / ConsumerConfig)
-├── data/           # CsvDataProvider nạp dữ liệu từ CSV
-├── runtime/        # Runtime Factories (ConsumerRuntimeFactory: API & NoSQL)
-└── tests/          # Các Test Suite (<Feature>ApiTest) - KHÔNG để file nháp/rác
+├── auth/                 # AuthProvider, token/session và đăng nhập
+├── config/               # Config / ConsumerConfig
+├── data/                 # DataProvider và fixture loader
+├── runtime/              # Runtime factories
+├── shared/
+│   └── model/            # DTO chỉ dùng chung khi contract thực sự giống nhau
+└── modules/              # Dùng khi dự án có nhiều phân hệ/cổng
+    └── <subsystem>/
+        ├── client/       # Domain API Client theo feature/bounded context
+        ├── model/        # DTO thuộc contract của phân hệ
+        └── tests/        # Một <Feature>ApiTest cho mỗi feature/domain
 src/test/resources/
 ├── config.properties
-├── nosql/          # File truy vấn NoSQL (.json)
-├── sql/            # File truy vấn SQL (.sql)
-└── testdata/       # File dữ liệu kiểm thử (.csv)
+├── nosql/                # Query NoSQL (.json)
+├── sql/                  # Query SQL (.sql)
+└── testdata/             # Test data (.csv / payload fixtures)
 ```
 
+Dự án nhỏ có thể dùng `client/`, `model/`, `tests/` trực tiếp dưới `<package_root>`. Khi có nhiều phân hệ độc lập, chuyển sang `modules/<subsystem>/...` để giữ rõ ownership; không tách package chỉ theo loại test như `smoke/`, `csv/`, `crud/`.
 ---
 
 ## 8. BẢO MẬT & THỰC THI AN TOÀN
