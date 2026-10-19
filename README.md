@@ -8,10 +8,13 @@ Framework Java 17 dùng chung cho API test automation. Framework cung cấp tran
 |---|---|
 | framework-core | Config, request/response, actor, credential, retry, redaction và test context |
 | framework-http-restassured | RestAssured transport dùng chung |
+| framework-http-jdk | JDK HTTP transport có API `CompletableFuture` non-blocking |
 | framework-fixtures | Cleanup LIFO, eventual-consistency polling và test data unique |
 | framework-testng | TestNG lifecycle, runtime wiring và trace |
 | framework-sql | JDBC client trung lập vendor cho SQL assertions |
 | framework-nosql | MongoDB client và query loader cho NoSQL assertions |
+| framework-allure | Listener tùy chọn đính kèm API trace vào từng kết quả Allure/TestNG |
+| framework-contract | JSON Schema validation cho response JSON và schema tham chiếu |
 | starter-example | Contract example trong reactor; không phải template cho sản phẩm mới |
 | template-consumer-api/ | Starter project độc lập để tạo repository consumer mới |
 
@@ -41,6 +44,17 @@ resources().register("user", userId, () -> client.deleteUser(userId));
 ~~~
 
 Không có module `utils` tổng hợp có chủ ý: tiện ích chỉ nên vào framework khi có hợp đồng ổn định, không gắn với schema/API cụ thể và được nhiều consumer dùng. CSV parsing, DTO mapping, câu SQL, JDBC driver, JSON fixtures theo sản phẩm, auth đặc thù và builders nghiệp vụ thuộc consumer; module SQL chỉ cung cấp API kết nối/chạy query chung.
+
+`framework-allure` là dependency tùy chọn cho consumer cần báo cáo Allure. Module đính kèm trace JSON đã được redaction vào từng kết quả TestNG; report JSON độc lập trong `target/api-traces` vẫn được ghi như trước.
+
+`framework-http-jdk` cung cấp transport async cho consumer cần gửi request không chặn thread. Nó dùng cùng `ApiRequest`/`ApiResponse`, retry, auth, cookie jar và trace contracts; cấu hình TLS luôn cần certificate hợp lệ. Có thể gọi `executeAsync(request)` để giữ luồng async hoặc `execute(request)` khi cần API đồng bộ.
+
+~~~java
+JdkAsyncApiClient client = new JdkAsyncApiClient(config, credentials, new CurrentTestTraceSink());
+CompletableFuture<ApiResponse> pending = client.executeAsync(ApiRequest.get("hrm", "/health").build());
+~~~
+
+`framework-contract` hỗ trợ kiểm tra response theo JSON Schema Draft 2020-12 mặc định, đồng thời tôn trọng dialect khai báo trong schema. Schema được consumer quản lý và nạp qua URI để có thể dùng `$ref` giữa các schema; mọi schema tham chiếu phải nằm trong map đã truyền vào và không có tải schema qua mạng. Lỗi chỉ hiển thị JSON path và quy tắc vi phạm, không in toàn bộ response.
 
 ## Build và kiểm thử framework
 
@@ -152,7 +166,7 @@ GitLab self-managed trong môi trường hiện tại đang dùng HTTP ở một
 
 `template-consumer-api` hiện có `ConsumerConfig`, `ConfiguredAuthProvider`, `ConsumerRuntimeFactory`, `BaseProjectApiTest`, `SampleApiClient` và smoke test offline. Config loader của **template** đọc system properties, environment variables, `config-local.properties`, rồi `src/test/resources/config.properties`; các key như `auth.mode` map thành `AUTH_MODE`. Framework core không tự đọc cấu hình sản phẩm.
 
-Auth adapter của template hỗ trợ token Bearer/cookie tĩnh và login JSON cơ bản. Consumer có giao thức khác như GConnect OAuth cần `AuthProvider` riêng trong consumer. Token/session cache trong memory theo profile/actor trong vòng đời runtime; không phải session bền vững trên đĩa. Framework API hiện không tự duy trì cookie jar từ mọi response. Xem [auth/session trong README template](template-consumer-api/README.md#authsession-có-sẵn-trong-consumer).
+Auth adapter của template hỗ trợ token Bearer/cookie tĩnh và login JSON cơ bản. Consumer có giao thức khác như GConnect OAuth cần `AuthProvider` riêng trong consumer. Token và cookie jar được giữ trong bộ nhớ theo service/profile/actor trong vòng đời runtime; không ghi xuống đĩa và được xóa khi runtime đóng. Có thể xóa session riêng bằng `api().clearSession("api", actor)` hoặc xóa toàn bộ bằng `api().clearSessions()`. Xem [auth/session trong README template](template-consumer-api/README.md#authsession-có-sẵn-trong-consumer).
 
 Domain client như UserClient bọc `ApiClient` và giữ method/path/serialization của sản phẩm; test scenario gọi client rồi assert response. Resource test tạo ra đăng ký qua `resources()` để framework cleanup kể cả khi assertion fail. Không gọi RestAssured trực tiếp trong test và không commit URL có credential, password, token hoặc response nhạy cảm.
 

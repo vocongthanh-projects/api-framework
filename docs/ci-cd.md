@@ -10,7 +10,7 @@ validate -> test -> deploy
 
 - **validate**: Compiles and packages all reactor modules with sources and javadocs attached (`-DskipTests package`).
 - **test**: Executes the framework test suite and installs the reactor artifacts locally, then runs `template-consumer-api/` against those artifacts with `clean verify`. This checks the consumer starter before publication without requiring a GitLab package round trip. Publishes Surefire JUnit XML reports + redacted API traces.
-- **deploy**: Deploys `api-framework-parent` and the 4 core libraries (`framework-core`, `framework-http-restassured`, `framework-fixtures`, `framework-testng`) along with their `-sources.jar` and `-javadoc.jar` to the GitLab Package Registry. `starter-example` is explicitly skipped.
+- **deploy**: Deploys `api-framework-parent` and all reusable framework modules, including optional SQL, NoSQL and Allure integrations, along with their `-sources.jar` and `-javadoc.jar` to the GitLab Package Registry. `starter-example` is explicitly skipped.
 
 ## 2. Consumer Template Pipeline
 
@@ -51,4 +51,5 @@ Publish these artifacts:
 - Surefire XML as the CI source of truth.
 - `target/api-traces` from every shard.
 - Optional Allure output generated from traces.
+- When a consumer enables `framework-allure`, `target/allure-results/` from every shard.
 - Optional Excel generated after execution, never inside the test listener.

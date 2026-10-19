@@ -3,6 +3,7 @@ package vn.ots.qc.api.core.retry;
 import java.net.ConnectException;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
+import java.net.http.HttpTimeoutException;
 import java.time.Duration;
 import java.util.concurrent.ThreadLocalRandom;
 import vn.ots.qc.api.core.config.RetryConfig;
@@ -38,6 +39,7 @@ public final class RetryPolicy {
     for (Throwable current = throwable; current != null; current = current.getCause()) {
       if (current instanceof ConnectException
           || current instanceof SocketTimeoutException
+          || current instanceof HttpTimeoutException
           || current instanceof SocketException) {
         return true;
       }

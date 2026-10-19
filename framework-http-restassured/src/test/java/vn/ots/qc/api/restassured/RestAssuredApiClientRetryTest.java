@@ -38,6 +38,8 @@ public class RestAssuredApiClientRetryTest {
     server.createContext("/protected", this::handleProtected);
     server.createContext("/upload", this::handleUpload);
     server.createContext("/binary", this::handleBinary);
+    server.createContext("/session/start", this::handleSessionStart);
+    server.createContext("/session/check", this::handleSessionCheck);
     server.start();
   }
 
@@ -194,6 +196,26 @@ public class RestAssuredApiClientRetryTest {
         traces.get(0).responseBody(), "<binary content-type=application/octet-stream bytes=4>");
   }
 
+  @Test
+  public void storesAndResendsServerCookiesWithoutTracingTheirValues() {
+    List<ExchangeTrace> traces = new ArrayList<>();
+    RestAssuredApiClient client =
+        new RestAssuredApiClient(config(), new CredentialManager(Map.of()), traces::add);
+
+    Assert.assertEquals(
+        client.execute(ApiRequest.get("test", "/session/start").build()).statusCode(), 200);
+    ApiResponse response = client.execute(ApiRequest.get("test", "/session/check").build());
+
+    Assert.assertEquals(response.statusCode(), 200);
+    Assert.assertTrue(
+        traces.stream()
+            .flatMap(trace -> trace.requestHeaders().values().stream())
+            .noneMatch(value -> value.contains("secret-value")));
+    client.clearSession("test", null);
+    Assert.assertEquals(
+        client.execute(ApiRequest.get("test", "/session/check").build()).statusCode(), 401);
+  }
+
   private FrameworkConfig config() {
     return FrameworkConfig.builder()
         .service(
@@ -247,6 +269,23 @@ public class RestAssuredApiClientRetryTest {
     byte[] body = {0, 1, 2, (byte) 255};
     exchange.getResponseHeaders().set("Content-Type", "application/octet-stream");
     exchange.sendResponseHeaders(200, body.length);
+    exchange.getResponseBody().write(body);
+    exchange.close();
+  }
+
+  private void handleSessionStart(HttpExchange exchange) throws IOException {
+    exchange.getResponseHeaders().add("Set-Cookie", "session-id=secret-value; Path=/; HttpOnly");
+    byte[] body = "{}".getBytes(StandardCharsets.UTF_8);
+    exchange.sendResponseHeaders(200, body.length);
+    exchange.getResponseBody().write(body);
+    exchange.close();
+  }
+
+  private void handleSessionCheck(HttpExchange exchange) throws IOException {
+    String cookie = exchange.getRequestHeaders().getFirst("Cookie");
+    int status = cookie != null && cookie.contains("session-id=secret-value") ? 200 : 401;
+    byte[] body = "{}".getBytes(StandardCharsets.UTF_8);
+    exchange.sendResponseHeaders(status, body.length);
     exchange.getResponseBody().write(body);
     exchange.close();
   }

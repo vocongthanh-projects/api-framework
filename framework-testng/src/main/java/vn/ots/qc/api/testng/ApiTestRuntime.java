@@ -18,5 +18,6 @@ public record ApiTestRuntime(
   @Override
   public void close() {
     credentials.clear();
+    client.clearSessions();
   }
 }
