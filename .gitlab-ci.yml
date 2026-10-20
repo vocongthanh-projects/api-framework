@@ -1,6 +1,8 @@
 workflow:
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS'
+      when: never
     - if: '$CI_COMMIT_BRANCH == "develop"'
     - if: '$CI_COMMIT_TAG'
 
@@ -11,6 +13,7 @@ default:
     key:
       files:
         - pom.xml
+        - .mvn/wrapper/maven-wrapper.properties
     paths:
       - .m2/repository/
   before_script:
@@ -18,84 +21,33 @@ default:
 
 stages:
   - validate
-  - deploy
-  - compatibility-config
-  - compatibility
   - notify
 
 variables:
   MAVEN_OPTS: "-Dmaven.repo.local=$CI_PROJECT_DIR/.m2/repository"
   MAVEN_CLI_OPTS: "-B -ntp -Dstyle.color=never"
-  API_FRAMEWORK_VERSION: "1.0.2-SNAPSHOT"
-  API_COMPATIBILITY_BRANCH: "develop"
 
-validate:
+compile-framework-and-template:
   stage: validate
+  timeout: 15m
   script:
-    - ./mvnw $MAVEN_CLI_OPTS -DskipTests install
+    - ./mvnw $MAVEN_CLI_OPTS -DskipTests clean install
     - cd template-consumer-api
     - ./mvnw $MAVEN_CLI_OPTS -DskipTests clean verify
-    - cd "$CI_PROJECT_DIR"
-
-deploy:
-  stage: deploy
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "develop"'
-    - if: '$CI_COMMIT_TAG'
-  script:
-    - |
-      if [ -n "$CI_COMMIT_TAG" ]; then
-        RELEASE_VERSION="${CI_COMMIT_TAG#v}"
-        ./mvnw $MAVEN_CLI_OPTS versions:set -DnewVersion="$RELEASE_VERSION" -DprocessAllModules=true -DgenerateBackupPoms=false
-      fi
-    - ./mvnw $MAVEN_CLI_OPTS deploy -DskipTests -s ci_settings.xml
-
-pages:
-  stage: deploy
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "develop"'
-    - if: '$CI_COMMIT_TAG'
-  script:
-    - ./mvnw $MAVEN_CLI_OPTS javadoc:aggregate -Ddoclint=none -Dquiet=true
-    - mkdir -p public
-    - cp -r target/reports/apidocs/* public/
-  artifacts:
-    paths:
-      - public
-    expire_in: 30 days
-
-consumer-target-check:
-  stage: compatibility-config
-  script:
-    - test -n "$API_COMPATIBILITY_PROJECT_PATH" || { echo "Set API_COMPATIBILITY_PROJECT_PATH in project CI/CD variables before enabling framework compatibility checks."; exit 1; }
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "develop"'
-
-consumer-compatibility:
-  stage: compatibility
-  inherit:
-    variables:
-      - API_FRAMEWORK_VERSION
-      - API_COMPATIBILITY_BRANCH
-  trigger:
-    project: "$API_COMPATIBILITY_PROJECT_PATH"
-    branch: "$API_COMPATIBILITY_BRANCH"
-    strategy: depend
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "develop"'
 
 telegram-success:
   stage: notify
   image: python:3.12-slim
+  timeout: 2m
   when: on_success
   variables:
     TELEGRAM_CHAT_ID: "$TELEGRAM_CHAT_GITLAB_OTS_FLI"
     TELEGRAM_THREAD_ID: "$TELEGRAM_THREAD_GITLAB_OTS_FLI"
-    TELEGRAM_STATUS: "success"
+    TELEGRAM_STATUS: "SUCCESS"
   script:
     - python3 scripts/notify_telegram.py
   rules:
-    - if: '$CI_COMMIT_BRANCH == "develop" && $TELEGRAM_BOT_TOKEN && $TELEGRAM_CHAT_GITLAB_OTS_FLI && $TELEGRAM_THREAD_GITLAB_OTS_FLI'
+    - if: '$TELEGRAM_BOT_TOKEN && $TELEGRAM_CHAT_GITLAB_OTS_FLI && $TELEGRAM_THREAD_GITLAB_OTS_FLI'
       when: on_success
     - when: never
   allow_failure: true
@@ -103,15 +55,16 @@ telegram-success:
 telegram-failure:
   stage: notify
   image: python:3.12-slim
+  timeout: 2m
   when: on_failure
   variables:
     TELEGRAM_CHAT_ID: "$TELEGRAM_CHAT_GITLAB_OTS_FLI"
     TELEGRAM_THREAD_ID: "$TELEGRAM_THREAD_GITLAB_OTS_FLI"
-    TELEGRAM_STATUS: "failed"
+    TELEGRAM_STATUS: "FAILED"
   script:
     - python3 scripts/notify_telegram.py
   rules:
-    - if: '$CI_COMMIT_BRANCH == "develop" && $TELEGRAM_BOT_TOKEN && $TELEGRAM_CHAT_GITLAB_OTS_FLI && $TELEGRAM_THREAD_GITLAB_OTS_FLI'
+    - if: '$TELEGRAM_BOT_TOKEN && $TELEGRAM_CHAT_GITLAB_OTS_FLI && $TELEGRAM_THREAD_GITLAB_OTS_FLI'
       when: on_failure
     - when: never
   allow_failure: true

@@ -1,0 +1,66 @@
+name: Framework source notification
+
+on:
+  push:
+    branches: [main, develop]
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Send Telegram notification
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_GITHUB_PERSONAL }}
+          TELEGRAM_THREAD_ID: ${{ secrets.TELEGRAM_THREAD_GITHUB_PERSONAL }}
+          EVENT_NAME: ${{ github.event_name }}
+          REPOSITORY: ${{ github.repository }}
+          BRANCH: ${{ github.ref_name }}
+          COMMIT_SHA: ${{ github.sha }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          python3 - <<'PYCODE'
+          import html
+          import json
+          import os
+          from urllib.request import Request, urlopen
+
+          event = os.environ["EVENT_NAME"]
+          status = "SOURCE PUSHED" if event == "push" else "MANUAL CHECK"
+          icon = "📦" if event == "push" else "🔔"
+          project = html.escape(os.environ["REPOSITORY"])
+          branch = html.escape(os.environ["BRANCH"])
+          commit = html.escape(os.environ["COMMIT_SHA"][:7])
+          run_url = html.escape(os.environ["RUN_URL"], quote=True)
+          message = "\n".join([
+              f"{icon} <b>Framework CI/CD notification</b>",
+              f"Project: <code>{project}</code>",
+              "Platform: <b>GitHub</b>",
+              f"Status: <b>{status}</b>",
+              f"Ref: <code>{branch}</code>",
+              f"Commit: <code>{commit}</code>",
+              f'Details: <a href="{run_url}">Open workflow</a>',
+          ])
+          payload = json.dumps({
+              "chat_id": os.environ["TELEGRAM_CHAT_ID"],
+              "message_thread_id": os.environ["TELEGRAM_THREAD_ID"],
+              "text": message,
+              "parse_mode": "HTML",
+              "disable_web_page_preview": True,
+          }).encode()
+          request = Request(
+              f"https://api.telegram.org/bot{os.environ['TELEGRAM_BOT_TOKEN']}/sendMessage",
+              data=payload,
+              headers={"Content-Type": "application/json"},
+              method="POST",
+          )
+          with urlopen(request, timeout=20) as response:
+              result = json.loads(response.read())
+          if not result.get("ok"):
+              raise SystemExit("Telegram API rejected the notification")
+          print("Telegram notification sent.")
+          PYCODE
