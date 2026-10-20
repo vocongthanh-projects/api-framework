@@ -36,7 +36,7 @@ RestAssured calls. Do not perform a mechanical package-wide rewrite.
 - No global mutable token or actor state.
 - No domain name in framework modules.
 - No secrets in source, logs, reports or artifacts.
-- CI fails on test failure and on zero selected tests.
+- Source CI rejects compile/configuration failures and does not execute the suite. Dedicated test infrastructure owns test-failure and zero-selected-test checks.
 - Every API attempt is present in the redacted trace.
 - Cleanup executes after both pass and failure.
 

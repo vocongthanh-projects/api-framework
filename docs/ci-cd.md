@@ -1,67 +1,38 @@
 # CI/CD
 
-## 1. Engine Pipeline (Current Framework Repository)
+## OTS/FLI source pipeline rule
 
-The `api-framework` repository validates, tests, publishes, checks consumer compatibility, then notifies Telegram:
+Every source push/MR pipeline is lightweight. It may validate configuration and versions, resolve dependencies, compile production and test sources, run static checks, and package artifacts. It must not execute API, browser/UI, Appium/mobile, database, integration, or product tests.
 
-```text
-validate -> test -> deploy -> compatibility-config -> compatibility -> notify
-```
+Full test suites run through a separately configured test infrastructure project/runner, using its own schedule or explicit trigger. Do not add product URLs, credentials, or local config files to a source compile pipeline.
 
-- **validate**: Compiles and packages all reactor modules with sources and javadocs attached (`-DskipTests package`).
-- **test**: Executes the framework test suite and installs the reactor artifacts locally, then runs `template-consumer-api/` against those artifacts with `clean verify`. This checks the consumer starter before publication without requiring a GitLab package round trip. Publishes Surefire JUnit XML reports + redacted API traces.
-- **deploy**: Deploys `api-framework-parent` and all reusable framework modules, including optional SQL, NoSQL and Allure integrations, along with their `-sources.jar` and `-javadoc.jar` to the GitLab Package Registry. `starter-example` is explicitly skipped.
-- **compatibility**: Triggers the configured consumer monorepo after a successful develop deploy and waits for its result.
-- **notify**: Sends the framework pipeline result to Telegram when its bot variables are configured. Notification failures do not change pipeline status.
+## Framework API source pipeline
 
-## 2. Consumer Template Pipeline
-
-The independent starter project in `template-consumer-api/` has its own `.gitlab-ci.yml`; it is not part of the framework reactor pipeline. The job:
-
-1. Creates a temporary Maven `settings.xml` using GitLab's built-in `CI_JOB_TOKEN`.
-2. Reads `API_FRAMEWORK_PROJECT_ID` from the consumer project's CI/CD variables.
-3. Resolves the framework from the project Maven endpoint and runs `clean verify`.
-4. Publishes Surefire XML and redacted API traces as job artifacts.
-
-Set `API_FRAMEWORK_PROJECT_ID` to the Framework API GitLab project ID for your instance. Add the consumer project to the framework project's CI/CD job-token allowlist so its token can read the private package. `API_FRAMEWORK_VERSION` is optional and defaults to `1.0.2-SNAPSHOT`; select a published release version for a stable consumer pipeline.
-
-The template smoke test uses an in-process JDK HTTP server. It checks Maven dependency resolution and the framework wiring without contacting a real service. Consumer API tests that need a product environment must receive their URL and credentials from protected/masked CI variables or a secret manager.
-
-## 3. API Framework to consumer compatibility pipeline
-
-After the `develop` package deploy succeeds, `consumer-compatibility` triggers the configured consumer monorepo once on its integration branch and passes the exact `API_FRAMEWORK_VERSION`. The root Maven reactor checks all registered consumer modules; the downstream pipeline includes integration tests and excludes database tests. The upstream pipeline waits for and reflects the downstream result.
-
-Set `API_COMPATIBILITY_PROJECT_PATH` to the consumer monorepo's exact GitLab path and `API_COMPATIBILITY_BRANCH` to its integration branch in the framework CI/CD settings. The branch defaults to `develop`. The pipeline fails early on `develop` if the project path is missing, instead of reporting a false compatibility success.
-
-The API Framework project must allow the configured consumer monorepo in its CI job-token allowlist so the consumer can resolve Maven packages. The monorepo must also have its environment and test-account settings configured as protected CI variables. Do not pass credentials through trigger variables.
-
-For Telegram results, configure these protected variables in the API Framework project: masked `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_GITLAB_OTS_FLI`, and `TELEGRAM_THREAD_GITLAB_OTS_FLI`. The success and failure jobs post to the GitLab company Telegram topic. Notification failures are allowed to fail without changing the pipeline result.
-
-## 4. Consumer Test Suite Blueprint (Target Architecture for consumer projects)
-
-For consumer repositories containing large enterprise regression suites (hundreds or thousands of API test scenarios), the recommended target pipeline is:
+The `framework-api` GitLab project runs:
 
 ```text
-validate -> unit -> smoke -> regression shards -> aggregate -> publish -> notify
+validate/compile -> package deploy -> docs -> consumer compile compatibility -> Telegram notification
 ```
 
-Validation should include compilation, formatting, static analysis, dependency checks, secret scanning and an
-architecture rule that rejects direct RestAssured use in consumer code.
+- `validate` builds and installs framework modules with `-DskipTests`, then runs the consumer template's `clean verify -DskipTests`. Maven compiles test sources but does not execute them.
+- `deploy` publishes Maven artifacts on configured branch/tag rules, using the project registry and `CI_JOB_TOKEN`.
+- `consumer-compatibility` triggers `api-ag270` after the framework package is published. The consumer pipeline resolves the exact framework version and compiles every module with `-DskipTests`; it does not run TestNG or contact product APIs.
+- `notify` reports pipeline status to Telegram. Notification failure does not change the compile result.
 
-The pipeline must use the repository already checked out by the CI runner. Never download source using a token
-embedded in YAML. Test failures must produce a non-zero build result; reporting and notification jobs may use
-`when: always` but must not overwrite that result.
+The current project path is `qc-quality-control/framework-api` (GitLab project ID `1263`), with `develop` as the integration branch. The GitHub mirror uses `main`; verify both trees match after source changes.
 
-Start with `-Dapi.test.parallel=classes` after migrating suites and isolating their data. The template caps this at
-four workers unless `-Dapi.test.thread-count` is supplied. Method-level parallelism can be selected with
-`-Dapi.test.parallel=methods` when every invocation owns its data and has no shared mutable test state. Keep
-shared-tenant and destructive suites serial.
-Shard regression tests by historical duration rather than class count, and distinguish runner retry from test retry.
+## API consumer source pipeline
 
-Publish these artifacts:
+The `api-ag270` compile job requires `API_FRAMEWORK_PROJECT_ID` so Maven can resolve the framework through the project package registry. Cross-project package access uses GitLab job-token permissions/allowlist; do not add a broad PAT just for dependency resolution.
 
-- Surefire XML as the CI source of truth.
-- `target/api-traces` from every shard.
-- Optional Allure output generated from traces.
-- When a consumer enables `framework-allure`, `target/allure-results/` from every shard.
-- Optional Excel generated after execution, never inside the test listener.
+The root CI runs `clean verify -DskipTests`. This compiles consumer test sources and resolves dependencies without executing TestNG. Product service URLs and test credentials are not required by this pipeline.
+
+## Consumer test suites
+
+The dedicated test infrastructure owns schedules/triggers, runner tags, product environment settings, test identities, device/browser availability, and test-result reporting. Keep its configuration independent from source push pipelines. It may include test-only templates, but source `.gitlab-ci.yml` files must not trigger those templates on push/MR.
+
+For API suites that need database access, protect the connection variables and use a runner with explicit test database access. Browser/Appium suites likewise require dedicated browsers/devices and must run on their designated infrastructure. Never assume the GitLab host or an untagged shared runner has product connectivity or test devices.
+
+## Telegram result notifications
+
+Configure masked `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_GITLAB_OTS_FLI`, and `TELEGRAM_THREAD_GITLAB_OTS_FLI` variables in GitLab. Success/failure jobs report source pipeline outcomes to the company topic; notification failures are allowed to fail without changing the pipeline result.
