@@ -70,7 +70,7 @@ Trước đó, đặt CONSUMER_GIT_URL bằng Clone URL lấy từ GitLab hoặc
 3. Scaffold vào repository mới đang rỗng. Script tự copy cả file ẩn như `.agents/`, `.cursor/`, `.github/`, `.gitignore` và `.gitlab-ci.yml`, đồng thời bỏ thư mục build `target/`:
 
 ~~~bash
-cd /path/to/api-framework
+cd /path/to/framework-api
 ./scripts/create-consumer-project.sh /path/to/my-api-test --package-root vn.ots.qc.api.consumer
 ~~~
 
@@ -102,7 +102,7 @@ Nếu project dùng develop làm branch chính, thay main bằng develop. Kiểm
 
 ### GitLab CI
 
-Template pipeline đọc các biến sau:
+Template pipeline chỉ compile consumer và test sources; Maven chạy với `-DskipTests`. Full API suite phải được schedule/trigger từ hạ tầng test riêng, không bật trong pipeline source push/MR. Pipeline compile đọc các biến sau:
 
 - API_FRAMEWORK_PROJECT_ID: ID project Framework API trên GitLab instance đang dùng.
 - API_FRAMEWORK_VERSION: optional; mặc định 1.0.2-SNAPSHOT.
@@ -144,7 +144,7 @@ Thay host theo GitLab instance. Self-managed GitLab hiện có thể chỉ cung 
 Nếu đang làm việc trên checkout framework cùng máy, có thể cài toàn bộ reactor vào Maven local repository:
 
 ~~~bash
-cd /path/to/api-framework
+cd /path/to/framework-api
 ./mvnw clean install
 cd /path/to/my-api-test
 ./mvnw clean verify
@@ -227,7 +227,7 @@ DB_USERNAME='<test-user>' DB_PASSWORD='<secret>' \
 
 Profile chỉ chọn TestNG group `database`; nó không tạo database, cấp credentials hay tự thêm vendor JDBC driver. Thay `SELECT 1` bằng truy vấn read-only của sản phẩm để xác nhận dữ liệu sau API call. Giới hạn DB account vào test environment và quyền tối thiểu cần thiết; không chạy SQL thay đổi/xóa dữ liệu trên môi trường dùng chung nếu chưa có thiết kế setup/cleanup rõ ràng. SQL files và DB assertions theo schema luôn nằm trong consumer.
 
-Trong GitLab CI, có thể thêm job riêng chạy `./mvnw -Pdatabase-tests test` với protected variables và runner có network access tới test DB. Không bật profile này cho pipeline mặc định nếu project không cấu hình database.
+Không thêm job chạy `./mvnw -Pdatabase-tests test` vào source pipeline. Hạ tầng test riêng có thể dùng profile đó với protected variables và runner được cấp network access tới test DB.
 
 Trong repository API Framework, xem docs/configuration.md, docs/architecture.md và docs/test-design.md để biết thêm chi tiết về cấu hình và thiết kế test.
 
@@ -245,7 +245,7 @@ Chạy riêng smoke:
 ./mvnw -Dtest=SmokeApiTest test
 ~~~
 
-Khi thêm test sản phẩm thật, các test đó có thể cần endpoint và credential riêng. Surefire XML nằm ở target/surefire-reports/; trace redacted ở target/api-traces/.
+Khi thêm test sản phẩm thật, chạy chúng từ hạ tầng test riêng với endpoint và credential được cấp an toàn. Surefire XML nằm ở target/surefire-reports/; trace redacted ở target/api-traces/.
 
 Template chạy tuần tự mặc định. Sau khi test đã độc lập dữ liệu, bật parallel theo class với giới hạn bốn worker:
 

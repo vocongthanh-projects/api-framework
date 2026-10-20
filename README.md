@@ -64,7 +64,7 @@ Yêu cầu JDK 17. Tại root framework:
 ./mvnw clean verify
 ~~~
 
-Bộ verify chạy offline, không gọi API sản phẩm. Starter example dùng HTTP server in-process. Pipeline Framework API chạy validate, test rồi deploy.
+Bộ verify chạy offline, không gọi API sản phẩm. Starter example dùng HTTP server in-process. Source pipeline chỉ kiểm tra cấu hình và compile; deploy package và compatibility consumer cũng không thực thi test.
 
 ## Tạo dự án consumer mới
 
@@ -154,7 +154,7 @@ Có thể truyền repository URL khi build nếu consumer POM dùng profile c�
 Nếu đang phát triển Framework API local, thay vì đọc package Registry có thể cài reactor vào local Maven repository rồi build template:
 
 ~~~bash
-cd /path/to/api-framework
+cd /path/to/framework-api
 ./mvnw clean install
 cd template-consumer-api
 ./mvnw clean verify
@@ -192,5 +192,5 @@ Xem [configuration](docs/configuration.md), [architecture](docs/architecture.md)
 - Mọi HTTP request đi qua ApiClient.
 - POST/PATCH/DELETE không retry nếu chưa được xác nhận idempotent.
 - Mọi resource test tạo ra cần cleanup.
-- CI phải fail khi Java verify/test fail.
+- Source CI phải fail khi compile, dependency resolution hoặc kiểm tra cấu hình fail. Full test suite chạy riêng trên hạ tầng test.
 - Trace phải redacted trước khi lưu artifact.
