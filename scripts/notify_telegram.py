@@ -28,7 +28,7 @@ def main() -> None:
     status_icon = "✅" if status == "SUCCESS" else "❌"
 
     message = (
-        f"{status_icon} <b>{project} → G-Connect compatibility</b>\n"
+        f"{status_icon} <b>{project} · CI/CD pipeline</b>\n"
         f"Status: <b>{status}</b>\n"
         f"Framework: <code>{version}</code>\n"
         f"Ref: <code>{branch}</code> · Commit: <code>{commit}</code>\n"

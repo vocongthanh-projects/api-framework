@@ -2,15 +2,17 @@
 
 ## 1. Engine Pipeline (Current Framework Repository)
 
-The `api-framework` repository runs a fast, self-contained pipeline across 3 stages:
+The `api-framework` repository validates, tests, publishes, checks consumer compatibility, then notifies Telegram:
 
 ```text
-validate -> test -> deploy
+validate -> test -> deploy -> compatibility-config -> compatibility -> notify
 ```
 
 - **validate**: Compiles and packages all reactor modules with sources and javadocs attached (`-DskipTests package`).
 - **test**: Executes the framework test suite and installs the reactor artifacts locally, then runs `template-consumer-api/` against those artifacts with `clean verify`. This checks the consumer starter before publication without requiring a GitLab package round trip. Publishes Surefire JUnit XML reports + redacted API traces.
 - **deploy**: Deploys `api-framework-parent` and all reusable framework modules, including optional SQL, NoSQL and Allure integrations, along with their `-sources.jar` and `-javadoc.jar` to the GitLab Package Registry. `starter-example` is explicitly skipped.
+- **compatibility**: Triggers the configured consumer monorepo after a successful develop deploy and waits for its result.
+- **notify**: Sends the framework pipeline result to Telegram when its bot variables are configured. Notification failures do not change pipeline status.
 
 ## 2. Consumer Template Pipeline
 
@@ -25,15 +27,15 @@ Set `API_FRAMEWORK_PROJECT_ID` to the Framework API GitLab project ID for your i
 
 The template smoke test uses an in-process JDK HTTP server. It checks Maven dependency resolution and the framework wiring without contacting a real service. Consumer API tests that need a product environment must receive their URL and credentials from protected/masked CI variables or a secret manager.
 
-## 3. API Framework to G-Connect compatibility pipeline
+## 3. API Framework to consumer compatibility pipeline
 
-After the `develop` package deploy succeeds, `gconnect-compatibility` triggers the G-Connect consumer project on its `main` branch and passes the exact `API_FRAMEWORK_VERSION`. The downstream job uses the `integration-tests` Maven profile so framework changes are checked against the consumer's integration suites, including RBAC. The upstream pipeline mirrors the downstream result.
+After the `develop` package deploy succeeds, `consumer-compatibility` triggers the configured consumer monorepo once on its integration branch and passes the exact `API_FRAMEWORK_VERSION`. The root Maven reactor checks all registered consumer modules; the downstream pipeline includes integration tests and excludes database tests. The upstream pipeline waits for and reflects the downstream result.
 
-Set `API_GCONNECT_PROJECT_PATH` to the consumer's exact GitLab path and `API_GCONNECT_BRANCH` to its integration branch in the framework CI/CD settings. The pipeline fails early on `develop` if the project path is missing, instead of reporting a false compatibility success.
+Set `API_COMPATIBILITY_PROJECT_PATH` to the consumer monorepo's exact GitLab path and `API_COMPATIBILITY_BRANCH` to its integration branch in the framework CI/CD settings. The branch defaults to `develop`. The pipeline fails early on `develop` if the project path is missing, instead of reporting a false compatibility success.
 
-The API Framework project must allow the G-Connect project in its CI job-token allowlist so the consumer can resolve Maven packages. G-Connect must also have its environment and test-account settings configured as protected CI variables. Do not pass credentials through trigger variables.
+The API Framework project must allow the configured consumer monorepo in its CI job-token allowlist so the consumer can resolve Maven packages. The monorepo must also have its environment and test-account settings configured as protected CI variables. Do not pass credentials through trigger variables.
 
-For Telegram results, configure these masked/protected variables in the API Framework project: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_AG270`, `TELEGRAM_THREAD_AG270_API`, and `TELEGRAM_THREAD_AG270_CI_FAILURES`. The success and failure jobs use the API and CI failures topics respectively. Notification failures are allowed to fail without changing the compatibility result.
+For Telegram results, configure these protected variables in the API Framework project: masked `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_GITLAB_OTS_FLI`, and `TELEGRAM_THREAD_GITLAB_OTS_FLI`. The success and failure jobs post to the GitLab company Telegram topic. Notification failures are allowed to fail without changing the pipeline result.
 
 ## 4. Consumer Test Suite Blueprint (Target Architecture for consumer projects)
 
