@@ -1,0 +1,57 @@
+name: GitHub source notification
+
+on:
+  push:
+    branches: [main, develop]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Telegram notification
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_GITHUB_PERSONAL }}
+          TELEGRAM_THREAD_ID: ${{ secrets.TELEGRAM_THREAD_GITHUB_PERSONAL }}
+          EVENT_NAME: ${{ github.event_name }}
+          REPOSITORY: ${{ github.repository }}
+          BRANCH: ${{ github.ref_name }}
+          COMMIT_SHA: ${{ github.sha }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          python3 - <<'PYCODE'
+          import json
+          import os
+          from urllib.request import Request, urlopen
+
+          event = os.environ["EVENT_NAME"]
+          title = "GitHub source updated" if event == "push" else "GitHub notification check"
+          text = "\n".join([
+              f"🔔 {title}",
+              f"Repository: {os.environ['REPOSITORY']}",
+              f"Branch: {os.environ['BRANCH']}",
+              f"Commit: {os.environ['COMMIT_SHA'][:7]}",
+              os.environ["RUN_URL"],
+          ])
+          payload = json.dumps({
+              "chat_id": os.environ["TELEGRAM_CHAT_ID"],
+              "message_thread_id": os.environ["TELEGRAM_THREAD_ID"],
+              "text": text,
+              "disable_web_page_preview": True,
+          }).encode()
+          request = Request(
+              f"https://api.telegram.org/bot{os.environ['TELEGRAM_BOT_TOKEN']}/sendMessage",
+              data=payload,
+              headers={"Content-Type": "application/json"},
+              method="POST",
+          )
+          with urlopen(request, timeout=20) as response:
+              result = json.loads(response.read())
+          if not result.get("ok"):
+              raise SystemExit("Telegram API rejected the notification")
+          print("Telegram notification sent.")
+          PYCODE
