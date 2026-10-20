@@ -92,6 +92,7 @@ consumer-compatibility:
   inherit:
     variables:
       - API_FRAMEWORK_VERSION
+      - API_COMPATIBILITY_BRANCH
   trigger:
     project: "$API_COMPATIBILITY_PROJECT_PATH"
     branch: "$API_COMPATIBILITY_BRANCH"
