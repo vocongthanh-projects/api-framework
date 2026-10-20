@@ -25,7 +25,17 @@ Set `API_FRAMEWORK_PROJECT_ID` to the Framework API GitLab project ID for your i
 
 The template smoke test uses an in-process JDK HTTP server. It checks Maven dependency resolution and the framework wiring without contacting a real service. Consumer API tests that need a product environment must receive their URL and credentials from protected/masked CI variables or a secret manager.
 
-## 3. Consumer Test Suite Blueprint (Target Architecture for consumer projects)
+## 3. API Framework to G-Connect compatibility pipeline
+
+After the `develop` package deploy succeeds, `gconnect-compatibility` triggers the G-Connect consumer project on its `main` branch and passes the exact `API_FRAMEWORK_VERSION`. The downstream job uses the `integration-tests` Maven profile so framework changes are checked against the consumer's integration suites, including RBAC. The upstream pipeline mirrors the downstream result.
+
+Set `API_GCONNECT_PROJECT_PATH` to the consumer's exact GitLab path and `API_GCONNECT_BRANCH` to its integration branch in the framework CI/CD settings. The pipeline fails early on `develop` if the project path is missing, instead of reporting a false compatibility success.
+
+The API Framework project must allow the G-Connect project in its CI job-token allowlist so the consumer can resolve Maven packages. G-Connect must also have its environment and test-account settings configured as protected CI variables. Do not pass credentials through trigger variables.
+
+For Telegram results, configure these masked/protected variables in the API Framework project: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_AG270`, `TELEGRAM_THREAD_AG270_API`, and `TELEGRAM_THREAD_AG270_CI_FAILURES`. The success and failure jobs use the API and CI failures topics respectively. Notification failures are allowed to fail without changing the compatibility result.
+
+## 4. Consumer Test Suite Blueprint (Target Architecture for consumer projects)
 
 For consumer repositories containing large enterprise regression suites (hundreds or thousands of API test scenarios), the recommended target pipeline is:
 
