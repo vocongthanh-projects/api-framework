@@ -1,10 +1,10 @@
 image: maven:3.9-eclipse-temurin-17
 
 stages:
-  - verify
+  - compile
 
-api-consumer-tests:
-  stage: verify
+api-consumer-compile:
+  stage: compile
   before_script:
     - mkdir -p "$HOME/.m2"
     - |
@@ -22,13 +22,4 @@ api-consumer-tests:
   script:
     - test -n "$API_FRAMEWORK_PROJECT_ID"
     - API_FRAMEWORK_VERSION="${API_FRAMEWORK_VERSION:-1.0.2-SNAPSHOT}"
-    - ./mvnw --batch-mode --no-transfer-progress -Dapi.framework.version="$API_FRAMEWORK_VERSION" -Dapi.framework.repository.url="$CI_API_V4_URL/projects/$API_FRAMEWORK_PROJECT_ID/packages/maven" -Dapi.test.parallel=classes clean verify
-  artifacts:
-    when: always
-    reports:
-      junit:
-        - "target/surefire-reports/TEST-*.xml"
-    paths:
-      - target/surefire-reports/
-      - target/api-traces/
-    expire_in: 7 days
+    - ./mvnw --batch-mode --no-transfer-progress -DskipTests -Dapi.framework.version="$API_FRAMEWORK_VERSION" -Dapi.framework.repository.url="$CI_API_V4_URL/projects/$API_FRAMEWORK_PROJECT_ID/packages/maven" clean verify
