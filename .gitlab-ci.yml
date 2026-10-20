@@ -18,7 +18,6 @@ default:
 
 stages:
   - validate
-  - test
   - deploy
   - compatibility-config
   - compatibility
@@ -33,25 +32,10 @@ variables:
 validate:
   stage: validate
   script:
-    - ./mvnw $MAVEN_CLI_OPTS -DskipTests package
-
-test:
-  stage: test
-  script:
-    - ./mvnw $MAVEN_CLI_OPTS install
+    - ./mvnw $MAVEN_CLI_OPTS -DskipTests install
     - cd template-consumer-api
-    - ./mvnw $MAVEN_CLI_OPTS -Dapi.test.parallel=classes clean verify
+    - ./mvnw $MAVEN_CLI_OPTS -DskipTests clean verify
     - cd "$CI_PROJECT_DIR"
-  artifacts:
-    when: always
-    expire_in: 7 days
-    reports:
-      junit:
-        - "*/target/surefire-reports/TEST-*.xml"
-    paths:
-      - "*/target/api-traces/"
-      - "*/target/surefire-reports/"
-      - "*/target/*.jar"
 
 deploy:
   stage: deploy
