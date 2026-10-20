@@ -1,6 +1,7 @@
 package vn.ots.qc.api.core.http;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -33,7 +34,9 @@ public final class ApiRequest {
     this.pathParams = Map.copyOf(builder.pathParams);
     this.headers = Map.copyOf(builder.headers);
     this.cookies = Map.copyOf(builder.cookies);
-    this.formParams = Map.copyOf(builder.formParams);
+    // Form parameters are serialized in iteration order, so preserve the order supplied by the
+    // builder while still exposing an immutable request snapshot.
+    this.formParams = Collections.unmodifiableMap(new LinkedHashMap<>(builder.formParams));
     this.multipartParts = List.copyOf(builder.multipartParts);
     this.retryMode = builder.retryMode;
     if (!multipartParts.isEmpty() && (body != null || !formParams.isEmpty())) {
