@@ -7,7 +7,7 @@ consumer tests
   -> consumer scenarios / fixtures / assertions
   -> consumer domain clients
   -> framework ApiClient
-  -> RestAssured transport
+  -> RestAssured or JDK async transport
   -> backend services
 ```
 
@@ -31,6 +31,9 @@ use that capability carefully and must never insert credentials directly in sour
 ## State and parallelism
 
 - Credentials are cached by `(auth profile, actor alias)` in a concurrent map.
+- Server-set cookies are kept in an in-memory jar keyed by `(service, auth profile, actor alias)`;
+  cookie domain, path, secure and expiry rules are applied by the JDK cookie store. Clear a single
+  jar with `ApiClient.clearSession(service, actor)` or all jars with `clearSessions()`.
 - `TestContext` and `ResourceLedger` are stored per executing thread and created for each test invocation.
 - `TestContextHolder` is thread-local only inside the TestNG integration and is always removed after a test.
 - The transport accepts a `TraceSink`; `CurrentTestTraceSink` is the explicit TestNG-to-transport bridge.
@@ -48,6 +51,8 @@ invocation identifier so parallel and repeated executions do not overwrite one a
 - Implement `AuthProvider` for Keycloak, encrypted login, cookies or API keys.
 - Add service default headers through `ServiceConfig`.
 - Wrap `ApiClient` in consumer domain clients.
-- Add an Allure bridge only after the first consumer pilot defines the report requirements.
+- `framework-allure` is an optional TestNG adapter that attaches each invocation's redacted API trace to Allure.
+- `framework-http-jdk` implements both `ApiClient` and `AsyncApiClient`; `executeAsync` uses JDK `HttpClient.sendAsync` and preserves the same retry, credential, cookie and trace behavior.
+- `framework-contract` validates response JSON against consumer-owned JSON Schemas and reports failing instance paths without echoing response bodies.
 - `RetryMode.IDEMPOTENT` requires both an endpoint guarantee and an `Idempotency-Key` header.
 - `MultipartPart` keeps files transport-neutral; `ApiResponse.bytes()` and `saveTo()` preserve binary output.

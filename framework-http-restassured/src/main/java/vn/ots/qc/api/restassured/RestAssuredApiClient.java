@@ -7,6 +7,11 @@ import io.restassured.config.RestAssuredConfig;
 import io.restassured.http.Header;
 import io.restassured.response.Response;
 import io.restassured.specification.RequestSpecification;
+import java.io.IOException;
+import java.net.CookieManager;
+import java.net.CookiePolicy;
+import java.net.HttpCookie;
+import java.net.URI;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -14,6 +19,9 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import vn.ots.qc.api.core.auth.Actor;
@@ -41,6 +49,7 @@ public final class RestAssuredApiClient implements ApiClient {
   private final TraceSink traceSink;
   private final Clock clock;
   private final Sleeper sleeper;
+  private final ConcurrentMap<SessionKey, CookieManager> cookieSessions = new ConcurrentHashMap<>();
 
   public RestAssuredApiClient(FrameworkConfig config, CredentialManager credentials) {
     this(config, credentials, TraceSink.noop());
@@ -95,6 +104,7 @@ public final class RestAssuredApiClient implements ApiClient {
 
         Response raw =
             dispatch(buildSpecification(service, request, auth, requestHeaders), request);
+        persistCookies(service, request, raw);
         byte[] responseBytes = raw.asByteArray();
         Duration attemptDuration = Duration.between(attemptStarted, clock.instant());
         record(
@@ -148,6 +158,17 @@ public final class RestAssuredApiClient implements ApiClient {
     }
   }
 
+  @Override
+  public void clearSession(String serviceName, Actor actor) {
+    ServiceConfig service = config.service(serviceName);
+    cookieSessions.remove(sessionKey(serviceName, service, actor));
+  }
+
+  @Override
+  public void clearSessions() {
+    cookieSessions.clear();
+  }
+
   private RequestSpecification buildSpecification(
       ServiceConfig service, ApiRequest request, AuthMaterial auth, Map<String, String> headers) {
     HttpClientConfig http =
@@ -161,6 +182,7 @@ public final class RestAssuredApiClient implements ApiClient {
             .baseUri(service.baseUri().toString())
             .headers(headers)
             .cookies(auth.cookies())
+            .cookies(sessionCookies(service, request))
             .cookies(request.cookies())
             .queryParams(request.queryParams())
             .pathParams(request.pathParams());
@@ -180,6 +202,56 @@ public final class RestAssuredApiClient implements ApiClient {
     if (request.body() != null) specification.body(request.body());
     return specification;
   }
+
+  private Map<String, String> sessionCookies(ServiceConfig service, ApiRequest request) {
+    URI requestUri = requestUri(service, request);
+    CookieManager manager =
+        cookieSessions.get(sessionKey(service.name(), service, request.actor()));
+    if (manager == null) return Map.of();
+    Map<String, String> cookies = new LinkedHashMap<>();
+    for (HttpCookie cookie : manager.getCookieStore().get(requestUri)) {
+      cookies.put(cookie.getName(), cookie.getValue());
+    }
+    return cookies;
+  }
+
+  private void persistCookies(ServiceConfig service, ApiRequest request, Response response) {
+    URI requestUri = requestUri(service, request);
+    Map<String, List<String>> headers = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+    for (Header header : response.headers()) {
+      headers
+          .computeIfAbsent(header.getName(), ignored -> new ArrayList<>())
+          .add(header.getValue());
+    }
+    CookieManager manager =
+        cookieSessions.computeIfAbsent(
+            sessionKey(service.name(), service, request.actor()),
+            ignored -> new CookieManager(null, CookiePolicy.ACCEPT_ORIGINAL_SERVER));
+    try {
+      manager.put(requestUri, headers);
+    } catch (IOException error) {
+      log.debug("Could not update session cookies for service {}", service.name(), error);
+    }
+  }
+
+  private URI requestUri(ServiceConfig service, ApiRequest request) {
+    String base = service.baseUri().toString();
+    String path = request.path();
+    while (path.startsWith("/")) path = path.substring(1);
+    if (!base.endsWith("/")) base += "/";
+    return URI.create(base).resolve(path);
+  }
+
+  private SessionKey sessionKey(String serviceName, ServiceConfig service, Actor actor) {
+    String alias = actor == null ? "anonymous" : actor.alias();
+    String profile =
+        actor == null || actor.authProfile().equals("none")
+            ? service.authProfile()
+            : actor.authProfile();
+    return new SessionKey(serviceName, profile, alias);
+  }
+
+  private record SessionKey(String service, String authProfile, String actorAlias) {}
 
   private Response dispatch(RequestSpecification specification, ApiRequest request) {
     return switch (request.method()) {

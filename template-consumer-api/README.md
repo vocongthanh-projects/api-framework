@@ -10,6 +10,27 @@ Starter project độc lập để tạo repository kiểm thử API mới bằn
 
 Smoke test của template tự mở JDK HTTP server trong process. Nó không cần Internet hoặc API sản phẩm và không chứng minh endpoint thật hoạt động.
 
+Consumer cần Allure có thể thêm dependency tùy chọn sau cùng version framework đang dùng:
+
+~~~xml
+<dependency>
+  <groupId>vn.ots.qc</groupId>
+  <artifactId>framework-allure</artifactId>
+  <version>${api.framework.version}</version>
+  <scope>test</scope>
+</dependency>
+~~~
+
+Sau đó đăng ký `AllureApiTraceListener` trong `@Listeners` hoặc `testng.xml`. Listener đính kèm trace JSON đã redaction vào test result; TestNG integration của Allure ghi kết quả vào `allure-results` để tạo report bằng Allure CLI.
+
+Consumer cần contract assertion có thể thêm dependency tùy chọn `vn.ots.qc:framework-contract` cùng version. Schema thuộc consumer; validator nhận map URI → JSON schema để hỗ trợ cả `$ref`:
+
+~~~java
+JsonSchemaAssertions contracts = new JsonSchemaAssertions(Map.of(
+    "classpath:schemas/user.json", Files.readString(Path.of("src/test/resources/schemas/user.json"))));
+contracts.requireValid(response, "classpath:schemas/user.json");
+~~~
+
 ## Utilities kiểm thử dùng chung
 
 Các helper không gắn với sản phẩm đã nằm trong dependency `framework-fixtures`; không cần tạo thư mục `utils` rồi chép lại framework code vào consumer:
@@ -167,7 +188,7 @@ export AUTH_PASSWORD='<secret>'
 ./mvnw test
 ~~~
 
-Giá trị JSON Pointer mặc định `/access_token` và `/expires_in` khớp phản hồi OAuth-style thông dụng; thay chúng theo response thật. Login mẫu gửi JSON POST và hỗ trợ một cặp username/password. OAuth client credentials, refresh-token flow riêng, CSRF, MFA, redirect login, custom signing hoặc session cookie cần protocol đặc thù thì triển khai `AuthProvider` riêng trong consumer, thay `ConfiguredAuthProvider` hoặc đăng ký thêm profile. Session cookie chỉ tự được đọc ở lần đăng nhập; framework gửi lại cookie đã cache nhưng hiện không duy trì cookie jar từ mọi response.
+Giá trị JSON Pointer mặc định `/access_token` và `/expires_in` khớp phản hồi OAuth-style thông dụng; thay chúng theo response thật. Login mẫu gửi JSON POST và hỗ trợ một cặp username/password. OAuth client credentials, refresh-token flow riêng, CSRF, MFA, redirect login hoặc custom signing cần protocol đặc thù thì triển khai `AuthProvider` riêng trong consumer, thay `ConfiguredAuthProvider` hoặc đăng ký thêm profile. RestAssured transport tự lưu cookie nhận từ mọi response trong cookie jar theo service/profile/actor và gửi lại cookie phù hợp domain/path ở request sau. Có thể gọi `api().clearSession(service, actor)` để xóa một jar hoặc `api().clearSessions()` để xóa tất cả; runtime tự xóa jar khi đóng.
 
 Trong consumer project:
 

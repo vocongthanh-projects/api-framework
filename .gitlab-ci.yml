@@ -16,14 +16,19 @@ default:
   before_script:
     - chmod +x mvnw
 
-variables:
-  MAVEN_OPTS: "-Dmaven.repo.local=$CI_PROJECT_DIR/.m2/repository"
-  MAVEN_CLI_OPTS: "-B -ntp -Dstyle.color=never"
-
 stages:
   - validate
   - test
   - deploy
+  - compatibility-config
+  - compatibility
+  - notify
+
+variables:
+  MAVEN_OPTS: "-Dmaven.repo.local=$CI_PROJECT_DIR/.m2/repository"
+  MAVEN_CLI_OPTS: "-B -ntp -Dstyle.color=never"
+  API_FRAMEWORK_VERSION: "1.0.2-SNAPSHOT"
+  API_COMPATIBILITY_BRANCH: "develop"
 
 validate:
   stage: validate
@@ -74,3 +79,54 @@ pages:
     paths:
       - public
     expire_in: 30 days
+
+consumer-target-check:
+  stage: compatibility-config
+  script:
+    - test -n "$API_COMPATIBILITY_PROJECT_PATH" || { echo "Set API_COMPATIBILITY_PROJECT_PATH in project CI/CD variables before enabling framework compatibility checks."; exit 1; }
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "develop"'
+
+consumer-compatibility:
+  stage: compatibility
+  inherit:
+    variables:
+      - API_FRAMEWORK_VERSION
+  trigger:
+    project: "$API_COMPATIBILITY_PROJECT_PATH"
+    branch: "$API_COMPATIBILITY_BRANCH"
+    strategy: depend
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "develop"'
+
+telegram-success:
+  stage: notify
+  image: python:3.12-slim
+  when: on_success
+  variables:
+    TELEGRAM_CHAT_ID: "$TELEGRAM_CHAT_GITLAB_OTS_FLI"
+    TELEGRAM_THREAD_ID: "$TELEGRAM_THREAD_GITLAB_OTS_FLI"
+    TELEGRAM_STATUS: "success"
+  script:
+    - python3 scripts/notify_telegram.py
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "develop" && $TELEGRAM_BOT_TOKEN && $TELEGRAM_CHAT_GITLAB_OTS_FLI && $TELEGRAM_THREAD_GITLAB_OTS_FLI'
+      when: on_success
+    - when: never
+  allow_failure: true
+
+telegram-failure:
+  stage: notify
+  image: python:3.12-slim
+  when: on_failure
+  variables:
+    TELEGRAM_CHAT_ID: "$TELEGRAM_CHAT_GITLAB_OTS_FLI"
+    TELEGRAM_THREAD_ID: "$TELEGRAM_THREAD_GITLAB_OTS_FLI"
+    TELEGRAM_STATUS: "failed"
+  script:
+    - python3 scripts/notify_telegram.py
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "develop" && $TELEGRAM_BOT_TOKEN && $TELEGRAM_CHAT_GITLAB_OTS_FLI && $TELEGRAM_THREAD_GITLAB_OTS_FLI'
+      when: on_failure
+    - when: never
+  allow_failure: true
