@@ -1,5 +1,8 @@
 # API Framework
 
+
+> Maven namespace migration: this source tree now uses `vn.ots.qc.api`. Existing published artifacts under `vn.ots.qc` are not relocated; consumers must update their dependency group IDs when using a package published from this source state.
+
 Framework Java 17 dùng chung cho API test automation. Framework cung cấp transport, config có kiểu, authentication hooks, retry an toàn, redaction, test lifecycle, cleanup và trace. Endpoint, DTO, credential, test data và nghiệp vụ thuộc về repository consumer.
 
 ## Modules và ví dụ
@@ -72,7 +75,7 @@ Bộ verify chạy offline, không gọi API sản phẩm. Starter example dùng
 
 Tóm tắt:
 
-1. Chờ pipeline của Framework API trên develop xanh và xác nhận Package Registry đã có version cần dùng. Source push thành công chưa có nghĩa package đã publish.
+1. Chọn version đã được publish vào Package Registry. Pipeline source trên `develop` hiện chỉ kiểm tra và cài artifact vào workspace của job; nó không publish package. Xác nhận package tồn tại trước khi khai báo dependency.
 2. Tạo repository GitLab rỗng cho sản phẩm, clone về máy.
 3. Scaffold project bằng script (script từ chối destination không rỗng, copy cả file/thư mục ẩn và bỏ Maven `target/`):
 
@@ -80,7 +83,7 @@ Tóm tắt:
 ./scripts/create-consumer-project.sh /path/to/new-api-test --package-root vn.ots.qc.api.newproject
 ~~~
 
-Template đã chứa `.agents/`, `AGENTS.md`, `.cursor/` và `.github/copilot-instructions.md`; các file này được giữ lại trong project mới.
+Template đã chứa `AGENTS.md` làm điểm vào chung cho Codex, Claude Code và Antigravity, cùng `.agents/` chứa quy chuẩn chi tiết. Các file hướng dẫn riêng cho Cursor và GitHub Copilot không còn được tạo.
 4. Đổi Maven coordinates của consumer; không đổi framework GAV nếu không có lý do.
 5. Cấu hình quyền đọc Maven package trong local Maven settings hoặc GitLab CI Job Token.
 6. Viết client, config và test nghiệp vụ trong consumer repository; giữ framework modules ở vai trò dependency.
@@ -102,25 +105,25 @@ Nếu dự án đã có Maven structure riêng, có thể khai báo project-scop
 
 <dependencies>
     <dependency>
-        <groupId>vn.ots.qc</groupId>
+        <groupId>vn.ots.qc.api</groupId>
         <artifactId>framework-core</artifactId>
         <version>1.0.2-SNAPSHOT</version>
         <scope>test</scope>
     </dependency>
     <dependency>
-        <groupId>vn.ots.qc</groupId>
+        <groupId>vn.ots.qc.api</groupId>
         <artifactId>framework-fixtures</artifactId>
         <version>1.0.2-SNAPSHOT</version>
         <scope>test</scope>
     </dependency>
     <dependency>
-        <groupId>vn.ots.qc</groupId>
+        <groupId>vn.ots.qc.api</groupId>
         <artifactId>framework-testng</artifactId>
         <version>1.0.2-SNAPSHOT</version>
         <scope>test</scope>
     </dependency>
     <dependency>
-        <groupId>vn.ots.qc</groupId>
+        <groupId>vn.ots.qc.api</groupId>
         <artifactId>framework-http-restassured</artifactId>
         <version>1.0.2-SNAPSHOT</version>
         <scope>test</scope>
@@ -174,16 +177,16 @@ Template có ví dụ CSV/TestNG DataProvider và SQL/JDBC tùy chọn, mặc đ
 
 ### Quy chuẩn cho trợ lý AI
 
-Template đóng gói `.agents/AGENTS.md` và các rule trong `.agents/rules/` làm nguồn chuẩn. `AGENTS.md` ở root hướng Cursor/Antigravity/Codex tới bộ quy chuẩn; `.cursor/rules/` và `.github/copilot-instructions.md` là điểm vào theo convention của từng công cụ, yêu cầu đọc cùng nguồn `.agents/`. Khi scaffold bằng script hoặc lệnh copy `template-consumer-api/.`, các file ẩn này được giữ nguyên.
+`AGENTS.md` ở root là điểm vào chung cho Codex, Claude Code và Antigravity; file này hướng dẫn AI đọc `.agents/AGENTS.md` và các quy chuẩn phù hợp trong `.agents/rules/`. Antigravity tự nạp các rule trong `.agents/rules/`; Cursor và GitHub Copilot không còn file cấu hình riêng trong template. Khi scaffold bằng script hoặc lệnh copy `template-consumer-api/.`, các file hướng dẫn này được giữ nguyên.
 
 Xem [configuration](docs/configuration.md), [architecture](docs/architecture.md), [test design](docs/test-design.md), [CI/CD](docs/ci-cd.md), [migration](docs/migration.md) và [quality audit](docs/quality-audit.md).
 
 ## Versioning và release
 
 - Push/merge lên develop kích hoạt pipeline; snapshot hiện trong source là 1.0.2-SNAPSHOT.
-- Pipeline deploy dùng project ID và API URL do GitLab CI cung cấp, xác thực bằng CI_JOB_TOKEN qua ci_settings.xml.
-- Tag release vX.Y.Z kích hoạt pipeline đổi version reactor thành X.Y.Z rồi deploy.
-- Dùng release version đã kiểm tra trên Registry cho consumer cần build lặp lại ổn định. Snapshot là version phát triển có thể thay đổi.
+- Pipeline hiện tại chỉ validate/compile và chạy kiểm tra compile-only cho consumer template; nó không deploy Maven artifacts.
+- Tag Git ghi nhận source release không tự publish package. Chỉ dùng dependency version có trên Registry sau khi quy trình publish thực tế hoàn tất.
+- Snapshot là version phát triển và có thể thay đổi; release version cần được xác nhận trên Registry trước khi consumer pin vào.
 
 ## Quy tắc an toàn
 

@@ -11,12 +11,11 @@ Full test suites run through a separately configured test infrastructure project
 The `framework-api` GitLab project runs:
 
 ```text
-validate/compile -> package deploy -> docs -> consumer compile compatibility -> Telegram notification
+validate/compile/install -> consumer template compile compatibility -> Telegram notification
 ```
 
-- `validate` builds and installs framework modules with `-DskipTests`, then runs the consumer template's `clean verify -DskipTests`. Maven compiles test sources but does not execute them.
-- `deploy` publishes Maven artifacts on configured branch/tag rules, using the project registry and `CI_JOB_TOKEN`.
-- `consumer-compatibility` triggers `api-ag270` after the framework package is published. The consumer pipeline resolves the exact framework version and compiles every module with `-DskipTests`; it does not run TestNG or contact product APIs.
+- `compile-framework-and-template` builds and installs framework modules in the job workspace with `-DskipTests`, then runs the consumer template's `clean verify`. It does not run API tests or publish Maven artifacts.
+- Package publishing and consumer compatibility triggers are not configured in this source pipeline; a Git tag alone does not publish a Maven package.
 - `notify` reports pipeline status to Telegram. Notification failure does not change the compile result.
 
 The current project path is `qc-quality-control/framework-api` (GitLab project ID `1263`), with `develop` as the integration branch. The GitHub mirror uses `main`; verify both trees match after source changes.

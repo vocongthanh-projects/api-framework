@@ -1,19 +1,19 @@
+---
+trigger: always_on
+description: Quy chuẩn thiết kế API test, module boundary, assertions, fixtures, cleanup, SQL/NoSQL và bảo mật.
+---
+
 # Quy chuẩn Kiểm thử API & Kiến trúc Dự án (API Testing Standards)
 
 Quy tắc bắt buộc cho cả Kỹ sư kiểm thử và Trợ lý AI khi phát triển / bảo trì test suite:
 
 ---
 
-## 1. NGUYÊN TẮC TỔ CHỨC TEST CLASS (CHỐNG LỘN XỘN & ĐẺ TRÀN LAN CLASS)
-- **1 Feature / Domain = 1 Test Suite duy nhất**:
-  - Tên class chuẩn: `<Feature>ApiTest.java` (Ví dụ: `CredentialApiTest`, `OrderSyncApiTest`, `AuthApiTest`).
-  - **NGHIÊM CẤM** tách nhỏ đẻ ra nhiều class cho cùng một tính năng:
-    - ❌ CẤM: `CredentialLiveTest`, `CredentialCsvTest`, `CredentialSearchTest`, `CredentialSmokeTest`.
-    - ✅ CHUẨN: Tất cả phương thức kiểm thử của feature đó gom vào duy nhất `CredentialApiTest`.
-- **Phân nhóm TestNG chuẩn**:
-  - `smoke`: Kiểm tra tính khả dụng cơ bản (health check, ping, list tối thiểu).
-  - `integration`: Kịch bản tích hợp nghiệp vụ đầy đủ (tạo, cập nhật, tìm kiếm, xác thực API).
-  - `database`: Kiểm tra dữ liệu trực tiếp trong DB (chỉ chạy với profile `-Pdatabase-tests` hoặc group tương ứng).
+## 1. TỔ CHỨC TEST THEO FEATURE VÀ MỤC ĐÍCH
+- Nhóm test theo feature/bounded context hoặc workflow nghiệp vụ để người đọc tìm được hành vi cần kiểm tra.
+- Không áp đặt một feature chỉ có đúng một test class. Có thể tách suite theo mục tiêu, rủi ro hoặc vòng đời khi việc tách làm rõ trách nhiệm; tránh cả một class khổng lồ lẫn một class cho từng endpoint/biến thể dữ liệu.
+- Tên class mô tả feature hoặc workflow, ví dụ `CredentialApiTest`, `CredentialLifecycleTest`, `OrderSyncApiTest`.
+- Phân nhóm TestNG theo phạm vi thực thi (`smoke`, `integration`, `database`) khi CI hoặc người chạy cần chọn nhóm; đây không phải lý do để nhân bản cùng một scenario thành nhiều test class.
 
 ---
 
@@ -28,11 +28,34 @@ Quy tắc bắt buộc cho cả Kỹ sư kiểm thử và Trợ lý AI khi phát
   - Nếu nhiều phân hệ thực sự dùng chung một contract ổn định, đặt DTO dùng chung trong package/module trung lập như `shared.model`; không để một phân hệ làm chủ DTO của phân hệ còn lại. Chỉ chia sẻ sau khi xác nhận schema và ngữ nghĩa giống nhau.
   - Khi tách client, chuyển các DTO liên quan, response envelope và kiểu lồng nhau cần thiết cùng ranh giới; không để lại import chéo gián tiếp.
 - **Quan hệ giữa Client và Test Suite**:
-  - Test Suite của feature tập trung toàn bộ smoke, data-driven và CRUD/lifecycle scenario của feature theo quy tắc Mục 1; dùng Domain Client tương ứng thay vì tự dựng request lặp lại.
+  - Các suite của feature kiểm tra hành vi smoke, data-driven và CRUD/lifecycle bằng Domain Client tương ứng thay vì tự dựng request lặp lại.
   - Test Suite E2E/workflow có thể phối hợp nhiều Domain Client để đi qua nhiều phân hệ; không nhân bản endpoint logic sang một God Client hoặc tạo suite trùng feature chỉ để phân loại loại test.
-- **Cấu trúc package theo quy mô**:
-  - Dự án nhỏ có thể giữ `client/`, `model/`, `tests/` ở cấp package gốc.
-  - Dự án có nhiều phân hệ/cổng độc lập phải nhóm theo `modules/<subsystem>/{client,model,tests}/`; đặt model dùng chung thật sự trong `shared/model/`.
+- **Cấu trúc package theo ownership và quy mô**:
+  - Dự án nhỏ có thể giữ `client/`, `model/`, `tests/` ở package gốc.
+  - Dự án nhiều phân hệ nhóm theo `modules/<subsystem>/`; bên trong nhóm tiếp theo theo feature/resource khi subsystem có nhiều API độc lập.
+  - Đặt client, DTO và test gần feature sở hữu chúng. Không gom hàng trăm DTO của nhiều resource vào một `model/` toàn cục; cũng không tạo package riêng chỉ vì HTTP verb.
+  - Tạo request/response type riêng khi wire contract hoặc ý nghĩa nghiệp vụ khác nhau. Tên như `CreateInvoiceRequest`, `UpdateInvoiceRequest`, `InvoiceResponse` mô tả hợp đồng; query parameter đơn giản không cần DTO chỉ để bọc tham số.
+  - Chỉ dùng `shared/model` cho contract có schema và ngữ nghĩa ổn định, thực sự giống nhau giữa các feature.
+
+Ví dụ khi dự án lớn dần:
+
+```text
+<package_root>/
+├── auth/                         # auth và session của consumer
+├── config/                       # cấu hình môi trường
+├── data/                         # fixture/provider dùng chung
+├── shared/model/                 # contract thật sự dùng chung
+└── modules/
+    └── billing/
+        ├── invoice/
+        │   ├── client/           # InvoiceClient
+        │   ├── model/            # CreateInvoiceRequest, InvoiceResponse, ...
+        │   └── tests/            # test các hành vi invoice liên quan
+        └── payment/
+            ├── client/
+            ├── model/
+            └── tests/
+```
 
 ---
 
@@ -130,7 +153,7 @@ Quy tắc bắt buộc cho cả Kỹ sư kiểm thử và Trợ lý AI khi phát
 
 ## 6. TRUY VẤN DATABASE: SỬ DỤNG MODULE CHUẨN TỪ FRAMEWORK
 - **Sử dụng module chuẩn của Framework**:
-  - Dùng `vn.ots.qc:framework-nosql` (`NoSqlClient`, `NoSqlQueryLoader`, `NoSqlConfig`); không khai báo MongoDB driver trực tiếp trong consumer nếu đã được kéo bắc cầu từ module này.
+  - Dùng `vn.ots.qc.api:framework-nosql` (`NoSqlClient`, `NoSqlQueryLoader`, `NoSqlConfig`); không khai báo MongoDB driver trực tiếp trong consumer nếu đã được kéo bắc cầu từ module này.
   - Dùng `framework-sql` cho JDBC API. Vì module trung lập vendor không đóng gói JDBC driver, consumer khai báo driver đúng loại database theo version được tổ chức phê duyệt và quản lý version tập trung.
 - **Database chỉ dùng để READ/VERIFY trong kiểm thử**:
   - Thao tác xóa hoặc dọn dẹp dữ liệu phải đi qua API của ứng dụng để mô phỏng đúng luồng người dùng thực tế. Không xóa tắt trực tiếp bằng lệnh DB DELETE.
@@ -148,9 +171,10 @@ src/test/java/<package_root>/
 │   └── model/            # DTO chỉ dùng chung khi contract thực sự giống nhau
 └── modules/              # Dùng khi dự án có nhiều phân hệ/cổng
     └── <subsystem>/
-        ├── client/       # Domain API Client theo feature/bounded context
-        ├── model/        # DTO thuộc contract của phân hệ
-        └── tests/        # Một <Feature>ApiTest cho mỗi feature/domain
+        └── <feature-or-resource>/
+            ├── client/   # Client cho resource/feature
+            ├── model/    # Request/response contract thuộc feature
+            └── tests/    # Suite theo hành vi, không ép một class duy nhất
 src/test/resources/
 ├── config.properties
 ├── nosql/                # Query NoSQL (.json)

@@ -10,11 +10,31 @@ Starter project độc lập để tạo repository kiểm thử API mới bằn
 
 Smoke test của template tự mở JDK HTTP server trong process. Nó không cần Internet hoặc API sản phẩm và không chứng minh endpoint thật hoạt động.
 
+## Cấu trúc source consumer
+
+Bắt đầu gọn ở package gốc nếu dự án chỉ có vài API. Khi có nhiều phân hệ hoặc nhiều resource độc lập, chuyển từng phần sang package theo feature/resource:
+
+```text
+src/test/java/<package_root>/
+├── auth/                         # auth adapter và session của consumer
+├── config/                       # cấu hình consumer
+├── data/                          # fixture/provider
+├── shared/model/                 # chỉ contract thật sự dùng chung
+└── modules/
+    └── <subsystem>/
+        └── <resource>/
+            ├── client/            # client chứa các endpoint cùng resource
+            ├── model/             # request/response DTO của resource
+            └── tests/              # test hành vi của resource
+```
+
+Không tạo package `get/`, `create/`, `update/` hoặc một folder model toàn cục cho toàn bộ hệ thống. Tách DTO khi contract request/response khác nhau; giữ các model trong resource sở hữu contract. Một resource có thể có nhiều suite nếu mỗi suite có mục tiêu rõ ràng.
+
 Consumer cần Allure có thể thêm dependency tùy chọn sau cùng version framework đang dùng:
 
 ~~~xml
 <dependency>
-  <groupId>vn.ots.qc</groupId>
+  <groupId>vn.ots.qc.api</groupId>
   <artifactId>framework-allure</artifactId>
   <version>${api.framework.version}</version>
   <scope>test</scope>
@@ -23,7 +43,7 @@ Consumer cần Allure có thể thêm dependency tùy chọn sau cùng version f
 
 Sau đó đăng ký `AllureApiTraceListener` trong `@Listeners` hoặc `testng.xml`. Listener đính kèm trace JSON đã redaction vào test result; TestNG integration của Allure ghi kết quả vào `allure-results` để tạo report bằng Allure CLI.
 
-Consumer cần contract assertion có thể thêm dependency tùy chọn `vn.ots.qc:framework-contract` cùng version. Schema thuộc consumer; validator nhận map URI → JSON schema để hỗ trợ cả `$ref`:
+Consumer cần contract assertion có thể thêm dependency tùy chọn `vn.ots.qc.api:framework-contract` cùng version. Schema thuộc consumer; validator nhận map URI → JSON schema để hỗ trợ cả `$ref`:
 
 ~~~java
 JsonSchemaAssertions contracts = new JsonSchemaAssertions(Map.of(
@@ -67,7 +87,7 @@ cd my-api-test
 
 Trước đó, đặt CONSUMER_GIT_URL bằng Clone URL lấy từ GitLab hoặc thay biến bằng URL thật. Không paste nguyên chuỗi placeholder.
 
-3. Scaffold vào repository mới đang rỗng. Script tự copy cả file ẩn như `.agents/`, `.cursor/`, `.github/`, `.gitignore` và `.gitlab-ci.yml`, đồng thời bỏ thư mục build `target/`:
+3. Scaffold vào repository mới đang rỗng. Script tự copy cả file ẩn như `.agents/`, `.gitignore` và `.gitlab-ci.yml`, đồng thời bỏ thư mục build `target/`:
 
 ~~~bash
 cd /path/to/framework-api
@@ -76,9 +96,9 @@ cd /path/to/framework-api
 
 Không nên đổi package bằng cách chỉ di chuyển thư mục `template` thủ công vì sẽ để lại các thư mục cha rỗng. Script có tùy chọn `--package-root` để đổi package và dọn namespace mẫu ngay khi khởi tạo. Nếu copy thủ công, hãy chuyển toàn bộ package root thay vì chỉ chuyển thư mục `template`.
 
-Template giữ `.agents/AGENTS.md` và `.agents/rules/` làm bộ quy chuẩn gốc. `AGENTS.md` ở root cùng `.cursor/rules/api-testing.mdc` và `.github/copilot-instructions.md` hướng các trợ lý tương ứng đọc bộ quy chuẩn đó; Antigravity tự nạp rules trong `.agents/`. Mở đầu phiên làm việc với công cụ khác, yêu cầu trợ lý đọc `.agents/AGENTS.md` nếu phiên bản hoặc cấu hình hiện tại không tự nạp file.
+`AGENTS.md` ở root là điểm vào chung cho Codex, Claude Code và Antigravity; file này hướng dẫn AI đọc `.agents/AGENTS.md` và các quy chuẩn phù hợp trong `.agents/rules/`. Antigravity tự nạp các rule trong `.agents/rules/`. Template không cần cấu hình riêng cho Cursor hoặc GitHub Copilot.
 
-4. Đổi groupId và artifactId trong pom.xml theo namespace của sản phẩm. Dùng `--package-root` khi scaffold để Java package khớp namespace dự án. Không đổi groupId/artifactId/version của các dependency framework `vn.ots.qc`.
+4. Đổi groupId và artifactId trong pom.xml theo namespace của sản phẩm. Dùng `--package-root` khi scaffold để Java package khớp namespace dự án. Không đổi groupId/artifactId/version của các dependency framework `vn.ots.qc.api`.
 5. Kiểm tra remote và file trước khi commit:
 
 ~~~bash

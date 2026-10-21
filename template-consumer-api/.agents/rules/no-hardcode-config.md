@@ -1,3 +1,8 @@
+---
+trigger: always_on
+description: Quy tắc cấu hình an toàn, không hardcode môi trường, secret hoặc dữ liệu nghiệp vụ.
+---
+
 # Coding Rule: No Hardcoding & Generic Config Naming
 
 ## 1. Tuyệt đối không Hardcode (No Hardcoding)

@@ -4,7 +4,7 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>vn.ots.qc</groupId>
+    <groupId>vn.ots.qc.api</groupId>
     <artifactId>api-framework-parent</artifactId>
     <version>1.0.2-SNAPSHOT</version>
     <packaging>pom</packaging>
@@ -47,27 +47,27 @@
     <dependencyManagement>
         <dependencies>
             <dependency>
-                <groupId>vn.ots.qc</groupId>
+                <groupId>vn.ots.qc.api</groupId>
                 <artifactId>framework-core</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>vn.ots.qc</groupId>
+                <groupId>vn.ots.qc.api</groupId>
                 <artifactId>framework-http-restassured</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>vn.ots.qc</groupId>
+                <groupId>vn.ots.qc.api</groupId>
                 <artifactId>framework-http-jdk</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>vn.ots.qc</groupId>
+                <groupId>vn.ots.qc.api</groupId>
                 <artifactId>framework-fixtures</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>vn.ots.qc</groupId>
+                <groupId>vn.ots.qc.api</groupId>
                 <artifactId>framework-testng</artifactId>
                 <version>${project.version}</version>
             </dependency>
@@ -97,12 +97,12 @@
                 <version>${slf4j.version}</version>
             </dependency>
             <dependency>
-                <groupId>vn.ots.qc</groupId>
+                <groupId>vn.ots.qc.api</groupId>
                 <artifactId>framework-nosql</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>vn.ots.qc</groupId>
+                <groupId>vn.ots.qc.api</groupId>
                 <artifactId>framework-sql</artifactId>
                 <version>${project.version}</version>
             </dependency>

@@ -24,31 +24,31 @@
 
     <dependencies>
         <dependency>
-            <groupId>vn.ots.qc</groupId>
+            <groupId>vn.ots.qc.api</groupId>
             <artifactId>framework-core</artifactId>
             <version>${api.framework.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>vn.ots.qc</groupId>
+            <groupId>vn.ots.qc.api</groupId>
             <artifactId>framework-fixtures</artifactId>
             <version>${api.framework.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>vn.ots.qc</groupId>
+            <groupId>vn.ots.qc.api</groupId>
             <artifactId>framework-testng</artifactId>
             <version>${api.framework.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>vn.ots.qc</groupId>
+            <groupId>vn.ots.qc.api</groupId>
             <artifactId>framework-http-restassured</artifactId>
             <version>${api.framework.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>vn.ots.qc</groupId>
+            <groupId>vn.ots.qc.api</groupId>
             <artifactId>framework-sql</artifactId>
             <version>${api.framework.version}</version>
             <scope>test</scope>
