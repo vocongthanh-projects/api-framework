@@ -7,7 +7,7 @@ import vn.ots.qc.api.testng.ApiTestRuntime;
 import vn.ots.qc.api.testng.BaseApiTest;
 import vn.ots.qc.api.testng.CurrentTestTraceSink;
 import vn.ots.qc.consumer.template.auth.ConsumerRuntimeFactory;
-import vn.ots.qc.consumer.template.modules.sample.client.SampleApiClient;
+import vn.ots.qc.consumer.template.portals.sample.modules.items.client.items.SampleApiClient;
 
 /** Base wiring for consumer tests. The sample server keeps the template smoke test offline. */
 public abstract class BaseProjectApiTest extends BaseApiTest {

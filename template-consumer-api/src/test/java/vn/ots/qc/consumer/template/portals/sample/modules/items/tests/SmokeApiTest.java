@@ -1,11 +1,11 @@
-package vn.ots.qc.consumer.template.modules.sample.tests;
+package vn.ots.qc.consumer.template.portals.sample.modules.items.tests;
 
 import org.testng.Assert;
 import org.testng.annotations.Test;
 import vn.ots.qc.api.core.auth.Actor;
 import vn.ots.qc.api.fixture.UniqueData;
 import vn.ots.qc.consumer.template.base.BaseProjectApiTest;
-import vn.ots.qc.consumer.template.modules.sample.model.CreateItemRequest;
+import vn.ots.qc.consumer.template.portals.sample.modules.items.model.items.CreateItemRequest;
 
 public final class SmokeApiTest extends BaseProjectApiTest {
   @Test(groups = "smoke")

@@ -12,45 +12,26 @@ Smoke test của template tự mở JDK HTTP server trong process. Nó không c�
 
 ## Cấu trúc source consumer
 
-Bắt đầu gọn ở package gốc nếu dự án chỉ có vài API. Khi có nhiều phân hệ hoặc nhiều resource độc lập, chuyển từng phần sang package theo feature/resource:
+Template bắt đầu với một portal mẫu và một module/service mẫu để code mới có ngay vị trí rõ ràng. Khi dự án có thêm domain, thêm portal; trong portal thêm module theo nhóm chức năng; trong mỗi module, gom endpoint cùng trách nhiệm vào service client/model tương ứng.
 
 ```text
 src/test/java/<package_root>/
-├── auth/                         # auth adapter và session của consumer
-├── config/                       # cấu hình consumer
-├── data/                          # fixture/provider
-├── shared/model/                 # chỉ contract thật sự dùng chung
-└── modules/
-    └── <subsystem>/
-        └── <resource>/
-            ├── client/            # client chứa các endpoint cùng resource
-            ├── model/             # request/response DTO của resource
-            └── tests/              # test hành vi của resource
+├── auth/ config/ data/ runtime/ base/    # hạ tầng consumer
+├── portals/
+│   └── <portal>/
+│       ├── shared/model/                # contract chung giữa modules trong portal
+│       └── modules/
+│           └── <module>/
+│               ├── client/<service>/
+│               ├── model/<service>/
+│               └── tests/
+├── shared/<service>/                     # contract/client dùng chung giữa portals
+└── workflows/<workflow>/tests/          # kịch bản đi qua nhiều module/portal
 ```
 
-Không tạo package `get/`, `create/`, `update/` hoặc một folder model toàn cục cho toàn bộ hệ thống. Tách DTO khi contract request/response khác nhau; giữ các model trong resource sở hữu contract. Một resource có thể có nhiều suite nếu mỗi suite có mục tiêu rõ ràng.
+Sample của template nằm ở `portals/sample/modules/items/`, trong đó client và model nằm dưới `client/items/` và `model/items/`. Thư viện Maven chỉ cung cấp API và tiện ích; cấu trúc source ban đầu được tạo bởi template/scaffold, còn rule đi kèm hướng dẫn cách mở rộng nhất quán. Glossary và layout các stack nằm trong [Consumer Source Layout](../docs/consumer-source-layout.md).
 
-Consumer cần Allure có thể thêm dependency tùy chọn sau cùng version framework đang dùng:
-
-~~~xml
-<dependency>
-  <groupId>vn.ots.qc.api</groupId>
-  <artifactId>framework-allure</artifactId>
-  <version>${api.framework.version}</version>
-  <scope>test</scope>
-</dependency>
-~~~
-
-Sau đó đăng ký `AllureApiTraceListener` trong `@Listeners` hoặc `testng.xml`. Listener đính kèm trace JSON đã redaction vào test result; TestNG integration của Allure ghi kết quả vào `allure-results` để tạo report bằng Allure CLI.
-
-Consumer cần contract assertion có thể thêm dependency tùy chọn `vn.ots.qc.api:framework-contract` cùng version. Schema thuộc consumer; validator nhận map URI → JSON schema để hỗ trợ cả `$ref`:
-
-~~~java
-JsonSchemaAssertions contracts = new JsonSchemaAssertions(Map.of(
-    "classpath:schemas/user.json", Files.readString(Path.of("src/test/resources/schemas/user.json"))));
-contracts.requireValid(response, "classpath:schemas/user.json");
-~~~
-
+Không tạo package `get/`, `create/`, `update/` hoặc một folder model toàn cục cho toàn bộ hệ thống. Tách DTO theo contract/ownership; GET/POST/PATCH/DELETE là thao tác trong service client.
 ## Utilities kiểm thử dùng chung
 
 Các helper không gắn với sản phẩm đã nằm trong dependency `framework-fixtures`; không cần tạo thư mục `utils` rồi chép lại framework code vào consumer:

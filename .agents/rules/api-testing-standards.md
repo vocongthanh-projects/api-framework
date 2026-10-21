@@ -30,32 +30,13 @@ Quy tắc bắt buộc cho cả Kỹ sư kiểm thử và Trợ lý AI khi phát
 - **Quan hệ giữa Client và Test Suite**:
   - Các suite của feature kiểm tra hành vi smoke, data-driven và CRUD/lifecycle bằng Domain Client tương ứng thay vì tự dựng request lặp lại.
   - Test Suite E2E/workflow có thể phối hợp nhiều Domain Client để đi qua nhiều phân hệ; không nhân bản endpoint logic sang một God Client hoặc tạo suite trùng feature chỉ để phân loại loại test.
-- **Cấu trúc package theo ownership và quy mô**:
-  - Dự án nhỏ có thể giữ `client/`, `model/`, `tests/` ở package gốc.
-  - Dự án nhiều phân hệ nhóm theo `modules/<subsystem>/`; bên trong nhóm tiếp theo theo feature/resource khi subsystem có nhiều API độc lập.
-  - Đặt client, DTO và test gần feature sở hữu chúng. Không gom hàng trăm DTO của nhiều resource vào một `model/` toàn cục; cũng không tạo package riêng chỉ vì HTTP verb.
-  - Tạo request/response type riêng khi wire contract hoặc ý nghĩa nghiệp vụ khác nhau. Tên như `CreateInvoiceRequest`, `UpdateInvoiceRequest`, `InvoiceResponse` mô tả hợp đồng; query parameter đơn giản không cần DTO chỉ để bọc tham số.
-  - Chỉ dùng `shared/model` cho contract có schema và ngữ nghĩa ổn định, thực sự giống nhau giữa các feature.
-
-Ví dụ khi dự án lớn dần:
-
-```text
-<package_root>/
-├── auth/                         # auth và session của consumer
-├── config/                       # cấu hình môi trường
-├── data/                         # fixture/provider dùng chung
-├── shared/model/                 # contract thật sự dùng chung
-└── modules/
-    └── billing/
-        ├── invoice/
-        │   ├── client/           # InvoiceClient
-        │   ├── model/            # CreateInvoiceRequest, InvoiceResponse, ...
-        │   └── tests/            # test các hành vi invoice liên quan
-        └── payment/
-            ├── client/
-            ├── model/
-            └── tests/
-```
+- **Cấu trúc package theo domain và ownership**:
+  - Consumer nhiều domain dùng một cấu trúc thống nhất: `portals/<portal>/modules/<module>/{client/<service>,model/<service>,tests}/`.
+  - `portal` là một domain/hệ thống sản phẩm độc lập; `module` là nhóm chức năng/tab bên trong portal; `service` là nhóm endpoint cùng trách nhiệm trong module. HTTP verbs là thao tác trong client, không tạo package/client riêng theo verb.
+  - Service client và model có package con cùng tên service. Nếu module chỉ có một service, vẫn giữ package service để nhất quán.
+  - Workflow xuyên nhiều module/portal đặt tại `workflows/<workflow>/tests/`. Infrastructure consumer (`auth`, `base`, `config`, `data`, `runtime`) ở package gốc.
+  - Contract dùng chung giữa module trong portal đặt tại `portals/<portal>/shared/model/`; chỉ contract thật sự tương thích giữa portal đặt tại `shared/<service>/model/`.
+  - Đây là package convention, không phải Maven module. Chỉ tạo Maven module/POM riêng khi cần boundary build, dependency hoặc release riêng.
 
 ---
 
@@ -161,28 +142,35 @@ Ví dụ khi dự án lớn dần:
 ---
 
 ## 7. CẤU TRÚC PACKAGE CONSUMER CHUẨN
-```
+
+Glossary: `portal` là domain/hệ thống sản phẩm; `module` là nhóm chức năng/tab trong portal; `service` là nhóm endpoint cùng trách nhiệm trong module; Maven module là project con có POM riêng.
+
+```text
 src/test/java/<package_root>/
-├── auth/                 # AuthProvider, token/session và đăng nhập
-├── config/               # Config / ConsumerConfig
-├── data/                 # DataProvider và fixture loader
-├── runtime/              # Runtime factories
-├── shared/
-│   └── model/            # DTO chỉ dùng chung khi contract thực sự giống nhau
-└── modules/              # Dùng khi dự án có nhiều phân hệ/cổng
-    └── <subsystem>/
-        └── <feature-or-resource>/
-            ├── client/   # Client cho resource/feature
-            ├── model/    # Request/response contract thuộc feature
-            └── tests/    # Suite theo hành vi, không ép một class duy nhất
+├── auth/                         # auth adapter/session của consumer
+├── base/                         # base test và wiring của consumer
+├── config/                       # config consumer
+├── data/                         # data provider/fixture loader
+├── runtime/                      # runtime factories
+├── portals/
+│   └── <portal>/
+│       ├── shared/model/         # contract chung ổn định giữa modules của portal
+│       └── modules/
+│           └── <module>/
+│               ├── client/<service>/
+│               ├── model/<service>/
+│               └── tests/
+├── shared/<service>/             # client/model dùng chung thật sự giữa portals
+└── workflows/<workflow>/tests/   # kịch bản phối hợp nhiều module/portal
+
 src/test/resources/
 ├── config.properties
-├── nosql/                # Query NoSQL (.json)
-├── sql/                  # Query SQL (.sql)
-└── testdata/             # Test data (.csv / payload fixtures)
+├── nosql/                        # query NoSQL (.json)
+├── sql/                          # query SQL (.sql)
+└── testdata/                     # CSV/JSON payload fixtures
 ```
 
-Dự án nhỏ có thể dùng `client/`, `model/`, `tests/` trực tiếp dưới `<package_root>`. Khi có nhiều phân hệ độc lập, chuyển sang `modules/<subsystem>/...` để giữ rõ ownership; không tách package chỉ theo loại test như `smoke/`, `csv/`, `crud/`.
+Mỗi client/model thuộc module và service sở hữu contract. Suite feature nằm trong module; suite phối hợp nhiều module/portal nằm trong `workflows/`. Không tạo package theo HTTP verb, không gom DTO không liên quan vào một model folder toàn cục và không tạo Maven module chỉ để phân nhóm package.
 ---
 
 ## 8. BẢO MẬT & THỰC THI AN TOÀN

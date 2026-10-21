@@ -1,10 +1,10 @@
-package vn.ots.qc.consumer.template.modules.sample.client;
+package vn.ots.qc.consumer.template.portals.sample.modules.items.client.items;
 
 import vn.ots.qc.api.core.auth.Actor;
 import vn.ots.qc.api.core.http.ApiClient;
 import vn.ots.qc.api.core.http.ApiRequest;
 import vn.ots.qc.api.core.http.ApiResponse;
-import vn.ots.qc.consumer.template.modules.sample.model.CreateItemRequest;
+import vn.ots.qc.consumer.template.portals.sample.modules.items.model.items.CreateItemRequest;
 
 /** Consumer-owned domain client. Keep application endpoints out of framework modules. */
 public final class SampleApiClient {
