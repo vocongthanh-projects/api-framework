@@ -14,6 +14,21 @@ consumer tests
 Framework modules never import consumer code. `framework-core` has no dependency on RestAssured or TestNG.
 This keeps the public API portable and prevents each project from forking its own request executor.
 
+## Framework source packages
+
+Maven modules are the subsystem boundary; packages inside each module group cohesive framework capabilities. Keep the Java test packages aligned with the production packages so contract tests are easy to locate:
+
+```text
+framework-core/src/main/java/vn/ots/qc/api/core/{auth,config,context,http,retry,security,trace}/
+framework-core/src/test/java/vn/ots/qc/api/core/<same-capability>/
+framework-http-restassured/src/main/java/vn/ots/qc/api/restassured/
+framework-http-jdk/src/main/java/vn/ots/qc/api/http/jdk/
+framework-fixtures/src/main/java/vn/ots/qc/api/fixture/
+framework-testng/src/main/java/vn/ots/qc/api/testng/
+```
+
+The SQL, NoSQL, Allure, and schema-contract integrations each keep their API and tests inside their own Maven module and package. Do not create packages by HTTP verb or move product endpoints, request/response DTOs, or business workflows into these framework modules. Split a module only when dependency, lifecycle, or public API boundaries justify it; package size by itself is not a reason.
+
 ## Request pipeline
 
 1. Resolve the named service and its base URI.
