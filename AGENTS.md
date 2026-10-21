@@ -7,7 +7,7 @@ This repository contains reusable API test automation infrastructure. Product en
 - Read this file, `README.md`, and the relevant module documentation.
 - Read `.agents/AGENTS.md` and the applicable files in `.agents/rules/`. These contain the detailed API design, test, and configuration standards.
 - Treat the Maven coordinates and module boundaries already present in the repository as authoritative; do not rename or split them based only on assumptions.
-- Keep framework Java packages grouped by reusable capability inside their Maven module, and mirror those packages under `src/test/java`. Product APIs, DTOs, and business scenarios belong in consumer repositories.
+- Keep framework Java packages grouped by reusable capability inside their Maven module, and mirror those packages under `src/test/java`. Follow [Framework Source Layout](docs/framework-source-layout.md) for cross-framework source rules. Product APIs, DTOs, and business scenarios belong in consumer repositories.
 
 ## OTS/FLI CI boundary
 

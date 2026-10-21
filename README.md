@@ -5,6 +5,8 @@
 
 Framework Java 17 dùng chung cho API test automation. Framework cung cấp transport, config có kiểu, authentication hooks, retry an toàn, redaction, test lifecycle, cleanup và trace. Endpoint, DTO, credential, test data và nghiệp vụ thuộc về repository consumer.
 
+Quy tắc tổ chức source dùng chung với các framework automation khác nằm trong [Framework Source Layout](docs/framework-source-layout.md). Source Java vẫn tuân thủ source roots chuẩn của từng Maven module.
+
 ## Modules và ví dụ
 
 | Module | Trách nhiệm |
